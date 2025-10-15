@@ -16,28 +16,13 @@ def criar_tabela(conn):
     """Cria a tabela de produtos se ela não existir."""
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-                       CREATE TABLE IF NOT EXISTS produtos
-                       (
-                           id
-                           INTEGER
-                           PRIMARY
-                           KEY
-                           AUTOINCREMENT,
-                           nome
-                           TEXT
-                           NOT
-                           NULL,
-                           quantidade
-                           INTEGER
-                           NOT
-                           NULL,
-                           preco
-                           REAL
-                           NOT
-                           NULL
-                       );
-                       """)
+        comando = """CREATE TABLE IF NOT EXISTS produtos (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     nome TEXT NOT NULL,
+                     quantidade INTEGER NOT NULL,
+                     preco REAL NOT NULL );"""
+        cursor.execute(comando)
+
     except Error as e:
         print(f"Erro ao criar a tabela: {e}")
 
@@ -140,7 +125,7 @@ def inicializar_db():
 # --- Bloco de teste ---
 if __name__ == '__main__':
     # Apague o .db antigo para um teste limpo
-    import os
+
 
     if os.path.exists("estoque.db"):
         os.remove("estoque.db")
