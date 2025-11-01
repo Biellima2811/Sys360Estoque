@@ -119,3 +119,33 @@ def verificar_login(login, senha):
     # Sucesso! Retorna os dados do usuario
     print(f"Login bem-sucedido! -> User: {usuario_db[1]} | Função : {usuario_db[4]}")
     return usuario_db
+
+def listar_todos_usuarios():
+    """Apenas repassa a listagem de usuários do banco."""
+    return db.listar_usuarios()
+
+def registrar_novo_usuario(nome_completo, login, senha, role):
+    """
+    Valida e registra um novo usuário no sistema.
+    Lança ValueError em caso de falha.
+    """
+    # 1. Validação de campos
+    if not nome_completo or not login or not senha or not role:
+        raise ValueError ("Atenção !, Todos os campos são de caráter obrigatorio. ")
+    
+    if role not in ['admin', 'funcionario']:
+        raise ValueError ("A 'FUNÇÂO deve ser 'admin' ou 'funcionario'.")
+    
+    if len(senha) < 4:
+        raise ValueError("A senha deve ter pelo menos 4 caracteres.")
+    # 2. Verificar se o login já existe
+    if db.buscar_usuario_por_login(login):
+        raise ValueError(f"O login '{login}', já está em uso.")
+    
+    # 3. Se tudo estiver OK, hashear a senha e salvar
+    try:
+        senha_hash = _hash_senha(senha)
+        db.adicionar_usuario(nome_completo, login, senha_hash, role) # <-- CORRETO! Salve o hash!
+        print(f"Novo usuario: '{login}' registrado com sucesso pela tela de admin.")
+    except Exception as e:
+        raise ValueError(f'Erro ao salvar no banco de dados: {e}')

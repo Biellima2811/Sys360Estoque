@@ -156,6 +156,24 @@ def buscar_usuario_por_login(login):
             print('Conexão encerrada com a base de dados')
             conn.close()
 
+def listar_usuarios():
+    """Retorna uma lista de todos os usuários (sem o hash da senha)."""
+    conn = conectar()
+    if conn is None: return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome_completo, login, role FROM usuarios ORDER BY nome_completo")
+        usuarios = cursor.fetchall()
+        return usuarios
+    except Error as e:
+        print(f'Erro ao listar usuarios cadastrados na base: {e}')
+        return []
+    finally:
+        if conn:
+            conn.close()
+            print("Conexão encerrada com a base...")
+
+            
 def inicializar_db():
     """Conecta ao DB e garante que a tabela de produtos exista."""
     conn = conectar()
