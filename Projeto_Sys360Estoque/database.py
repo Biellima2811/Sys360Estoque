@@ -23,6 +23,14 @@ def criar_tabela(conn):
                      preco REAL NOT NULL );"""
         cursor.execute(comando)
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     nome_completo TEXT NOT NULL,
+                     login TEXT UNIQUE NOT NULL,
+                     senha_hash TEXT NOT NULL,
+                     role TEXT NOT NULL DEFAULT 'funcionario' 
+                     );""") # roles: 'admin', 'funcionario'
+
     except Error as e:
         print(f"Erro ao criar a tabela: {e}")
 
@@ -111,6 +119,42 @@ def buscar_produto(nome):
         if conn:
             conn.close()
 
+def adicionar_usuario(nome_completo, login, senha_hash, role='funcionario'):
+    """Adiciona um novo usuário ao banco de dados."""
+    conn = conectar()
+    if conn is None:
+        return
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO usuarios (nome_completo, login, senha_hash, role) VALUES (?, ?, ?, ?)", (nome_completo, login, senha_hash, role)
+        )
+        conn.commit()
+        print(f'Usuario {login} criado com sucesso!')
+    except Error as e:
+        print(f'Erro ao adicionar usuario: {e}, verifique comando SQL')
+    finally:
+        if conn:
+            conn.close()
+
+def buscar_usuario_por_login(login):
+    """Busca um usuário pelo seu login."""
+    conn = conectar()
+    if conn is None: return None
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE login = ?", (login,))
+        usuario = cursor.fetchone() # Retorna uma tupla ou None
+        return usuario
+    except Error as e:
+        print(f'Erro ao buscar usuario: {e}')
+        return None
+    finally:
+        if conn:
+            print('Conexão encerrada com a base de dados')
+            conn.close()
 
 def inicializar_db():
     """Conecta ao DB e garante que a tabela de produtos exista."""
@@ -120,6 +164,8 @@ def inicializar_db():
         conn.close()
     else:
         print("Não foi possível estabelecer conexão com o banco de dados.")
+
+
 
 
 # --- Bloco de teste ---
