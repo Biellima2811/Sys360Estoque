@@ -50,6 +50,16 @@ def criar_tabela(conn):
                      FOREIGN KEY (venda_id) REFERENCES vendas(id),
                      FOREIGN KEY (produto_id) REFERENCES produtos(id)
                      );""")
+        
+        cursor.execute("""CREATE TABLE IF NOT EXISTS clientes (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     nome_completo TEXT NOT NULL,
+                     telefone TEXT,
+                     email TEXT,
+                     cpf_cnpj TEXT UNIQUE,
+                     endereco TEXT
+                     );""")
+        
     except Error as e:
         print(f"Erro ao criar a tabela: {e}")
 
@@ -266,6 +276,68 @@ def registrar_venda_transacao(usuario_id, total_venda, carrinho):
             conn.close()
             print('Conexão encerrada com a base de dados...')
 
+# ==========================================================
+# --- FUNÇÕES CRUD DE CLIENTES ---
+# ==========================================================
+
+def adicionar_cliente(nome, telefone, email, cpf_cnpj, endereco):
+    """Adiciona um novo cliente ao banco de dados."""
+    conn = conectar()
+    if conn is None: return
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute(
+        """INSERT INTO clientes (nome_completo, telefone, email, cpf_cnpj, endereco)
+           VALUES (?, ?, ?, ?, ?)""", (nome, telefone, email, cpf_cnpj, endereco))
+        
+        conn.commit()
+    except Error as e:
+        print(f"Erro ao adicionar cliente: {e}")
+        # Propaga o erro para o logic.py saber que falhou (ex: CPF/CNPJ duplicado)
+        raise e
+    finally:
+        if conn:
+            conn.close()
+            print('Conexão com a base de dados, foi encerrada!')
+
+def buscar_cliente_por_cpf(cpf_cnpj):
+    """Busca um cliente específico pelo seu CPF/CNPJ (que é UNIQUE)."""
+    conn = conectar()
+
+    if conn is None: return None
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM clientes WHERE cpf_cnpj = ?", (cpf_cnpj,))
+        cliente = cursor.fetchone()
+        return cliente
+    
+    except Error as e:
+        print(f"Erro ao buscar cliente por CPF/CNPJ: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+            print('Conexão com a base de dados foi encerrada!')
+
+def listar_clientes():
+    """Retorna uma lista de todos os clientes (campos principais)."""
+    conn = conectar()
+    if conn is None: return [] # Retorna uma lista
+    try:
+        cursor = conn.cursor()
+        # Retorna apenas os campos que queremos na tabela principal
+        cursor.execute("SELECT id, nome_completo, telefone, email, cpf_cnpj FROM clientes ORDER BY nome_completo")
+        clientes = cursor.fetchall()
+        return clientes
+    except Error as e:
+        print(f'Erro ao listar clientes: {e}')
+    finally:
+        if conn:
+            conn.close()
+            print('Conexão com a base de dados foi encerrada!')
+
 def inicializar_db():
     """Conecta ao DB e garante que a tabela de produtos exista."""
     conn = conectar()
@@ -274,3 +346,4 @@ def inicializar_db():
         conn.close()
     else:
         print("Não foi possível estabelecer conexão com o banco de dados.")
+
