@@ -1,4 +1,4 @@
-from database.db_manager import *
+from database import db_manager as db
 import bcrypt
 import re
 from sqlite3 import Error
@@ -25,7 +25,7 @@ def validar_produto_para_venda(id_produto_str, qtd_desejada_str):
     
     # 2. Validação de Regra de Negócio (Estoque)
     # Usamos a nova função do database.py
-    produto = buscar_produto_por_id(id_produto)
+    produto = db.buscar_produto_por_id(id_produto)
 
     if produto is None:
         raise ValueError(f'Produto com ID {id_produto} não encontrado!')
@@ -63,7 +63,7 @@ def processar_venda_completa(usuario_id, carrinho):
     for item in carrinho:
         produto_id = item[0]
         qtd_vendida = item[2]
-        produto_db = buscar_produto_por_id(produto_id) # Use buscar_produto_por_id (do db_manager)
+        produto_db = db.buscar_produto_por_id(produto_id) # Use buscar_produto_por_id (do db_manager)
         
         if produto_db is None:
             raise ValueError(f"Erro critico: Produto '{item[1]}' (ID: {produto_id} não existe mais.)")
@@ -81,7 +81,7 @@ def processar_venda_completa(usuario_id, carrinho):
 
     # 4. Enviar para a camada de dados (CORRETO: FORA DO LOOP)
     try:
-        venda_id = registrar_venda_transacao(usuario_id, total_venda, carrinho) # Use registrar_venda_transacao (do db_manager)
+        venda_id = db.registrar_venda_transacao(usuario_id, total_venda, carrinho) # Use registrar_venda_transacao (do db_manager)
         print(f'Logic.py: Venda {venda_id} procesada com sucesso.')
         return venda_id
     

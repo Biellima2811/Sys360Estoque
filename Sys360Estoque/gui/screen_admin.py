@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import os
 # NOVOS IMPORTS DE LÓGICA:
-from core.logic_usuarios import listar_todos_usuarios, registrar_novo_usuario
+from core import logic_usuarios as lg_usuarios
 # ==========================================================
 # --- CLASSE DA TELA DE GERENCIAMENTO DE USUÁRIOS (ADMIN) ---
 # ==========================================================
@@ -98,7 +98,7 @@ class TelaGerenciarUsuarios(tk.Toplevel):
         for item in self.tabela_usuarios.get_children():
             self.tabela_usuarios.delete(item)
         
-        lista_usuarios = listar_todos_usuarios()
+        lista_usuarios = lg_usuarios.listar_todos_usuarios()
         for usuario in lista_usuarios:
             # Insere a tupla (id, nome, login, role)
             self.tabela_usuarios.insert('', 'end', values=usuario)
@@ -113,7 +113,7 @@ class TelaGerenciarUsuarios(tk.Toplevel):
             role = self.combo_role.get()
 
             # 2. Enviar para a lógica (que pode dar erro)
-            registrar_novo_usuario(nome, login, senha, role)
+            lg_usuarios.registrar_novo_usuario(nome, login, senha, role)
 
             # 3. Sucesso, caso todas as informações bata com a base de dados 
             messagebox.showinfo("Sucesso", f"Usuario '{login}' foi criado com sucesso!")

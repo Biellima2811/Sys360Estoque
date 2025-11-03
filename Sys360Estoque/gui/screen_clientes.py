@@ -2,8 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import os
-# NOVOS IMPORTS DE LÓGICA:
-from core.logic_clientes import listar_todos_clientes, registrar_novo_cliente
+from core import logic_clientes as lg_clientes
 
 # ==========================================================
 # --- CLASSE DA TELA DE GERENCIAMENTO DE CLIENTES ---
@@ -100,7 +99,7 @@ class TelaGerenciarClientes(tk.Toplevel):
         for item in self.tabela_clientes.get_children():
             self.tabela_clientes.delete(item)
         
-        lista_clientes = listar_todos_clientes()
+        lista_clientes = lg_clientes.listar_todos_clientes()
         for cliente in lista_clientes:
             self.tabela_clientes.insert('', 'end', values=cliente)
         
@@ -115,7 +114,7 @@ class TelaGerenciarClientes(tk.Toplevel):
             endereco = self.entry_endereco.get()
 
             # 2. Enviar para a lógica (que pode dar erro de validação ou de BD)
-            registrar_novo_cliente(nome, telefone, email, cpf_cnpj, endereco)
+            lg_clientes.registrar_novo_cliente(nome, telefone, email, cpf_cnpj, endereco)
 
             # 3. Se tudo deu certo, sucesso!
             messagebox.showinfo("Sucesso", f"Cliente '{nome}' salvo com sucesso!", parent=self)

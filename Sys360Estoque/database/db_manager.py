@@ -60,19 +60,50 @@ def criar_tabela(conn):
                      endereco TEXT
                      );""")
         
+        # --- LÓGICA DE MIGRAÇÃO (ALTER TABLE) ---
+        # Isso atualiza o banco de dados se ele já existir
+        
+        # 1. Renomeia 'preco' para 'preco_venda'
+        try: # apenas renomeia a coluna preco para preco_custo
+            cursor.execute("ALTER TABLE produtos RENAME COLUMN preco TO preco_venda")
+        except Error as e:
+            pass # Ignora o erro se a coluna já foi renomeada
+
+        # 2. Adiciona as colunas novas
+        try: # Adiciona a coluna preço de custo
+            cursor.execute("ALTER TABLE produtos ADD COLUMN preco_custo REAL DEFAULT 0.0")
+        except Error as e:
+            pass
+
+        try: # Adiciona a coluna categoria
+            cursor.execute("ALTER TABLE produtos ADD COLUMN categoria TEXT NOT NULL")
+        except Error as e:
+            pass
+
+        try: # Adiciona a coluna Fornecedor
+            cursor.execute("ALTER TABLE produtos ADD COLUMN fornecedor TEXT NOT NULL")
+        except Error as e:
+            pass
+
+        
     except Error as e:
         print(f"Erro ao criar a tabela: {e}")
-
+        
 
 # --- FUNÇÕES CRUD ---
 
-def adicionar_produto(nome, quantidade, preco):
+def adicionar_produto(nome, quantidade, preco_venda, preco_custo, categoria, fornecedor):
     """Adiciona um novo produto ao banco de dados."""
     conn = conectar()
     if conn is None: return
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO produtos (nome, quantidade, preco) VALUES (?, ?, ?)", (nome, quantidade, preco))
+        cursor.execute("""INSERT INTO produtos (nome, 
+                                                quantidade, 
+                                                preco_venda, 
+                                                preco_custo,
+                                                categoria, 
+                                                fornecedor) VALUES (?, ?, ?, ?, ?, ?)""", (nome, quantidade, preco_venda, preco_custo, categoria, fornecedor))
         conn.commit()
     except Error as e:
         print(f"Erro ao adicionar produto: {e}")
@@ -99,14 +130,21 @@ def listar_produtos():
             conn.close()
 
 
-def atualizar_produto(id, nome, quantidade, preco):
+def atualizar_produto(id, nome, quantidade, preco_venda, preco_custo, categoria, fornecedor):
     """Atualiza os dados de um produto com base no seu ID."""
     conn = conectar()
     if conn is None: return
     try:
         cursor = conn.cursor()
-        cursor.execute("UPDATE produtos SET nome = ?, quantidade = ?, preco = ? WHERE id = ?",
-                       (nome, quantidade, preco, id))
+        cursor.execute("""UPDATE produtos SET 
+                       nome = ?, 
+                       quantidade = ?, 
+                       preco_venda = ?,
+                       preco_custo = ?,
+                       categoria = ?,
+                       fornecedor = ? 
+               WHERE id = ?""",
+                       (nome, quantidade, preco_venda, preco_custo, categoria, fornecedor, id))
         conn.commit()
     except Error as e:
         print(f"Erro ao atualizar produto: {e}")

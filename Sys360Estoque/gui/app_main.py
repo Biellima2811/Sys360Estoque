@@ -281,7 +281,7 @@ class App(JanelaPai):
             preco = self.entry_preco.get()
 
             # 2. Envia para o 'logic.py' fazer o trabalho pesado
-            ladicionar_produto(nome, quantidade, preco)
+            lg_produtos.adicionar_produto(nome, quantidade, preco)
 
             # 3. Se deu certo, atualiza a interface
             messagebox.showinfo("Sucesso!", f"Produto {nome} adicionado com sucesso!")

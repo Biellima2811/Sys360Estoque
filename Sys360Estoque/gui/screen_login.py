@@ -2,8 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import os
-from core.logic_usuarios import verificar_login # <-- NOVO IMPORT
-
+from core import logic_usuarios as lg_usuarios
 # ==========================================================
 # --- CLASSE DA TELA DE LOGIN ---
 # ==========================================================
@@ -67,7 +66,7 @@ class TelaLogin(tk.Toplevel):
         try:
             # 1. TENTA verificar o login (chama o logic.py)
             # Isso pode disparar um 'ValueError'
-            usuario_db = verificar_login(login, senha)
+            usuario_db = lg_usuarios.verificar_login(login, senha)
 
             # 2. SUCESSO!
             self.usuario_logado = usuario_db # Guarda os dados do usuário

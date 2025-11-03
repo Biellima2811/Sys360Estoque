@@ -1,4 +1,4 @@
-from database.db_manager import *
+from database import db_manager as db
 import bcrypt
 import re
 from sqlite3 import Error
@@ -21,10 +21,10 @@ def criar_primeiro_admin():
     Isso é crucial para a primeira execução do sistema.
     """
 
-    if not buscar_usuario_por_login("admin"):
+    if not db.buscar_usuario_por_login("admin"):
         print("Nenhum admin encontrado!, Criando usuario 'admin' padrão...")
         senha_hash = _hash_senha("admin") # Senha padrão é 'admin'
-        adicionar_usuario(
+        db.adicionar_usuario(
             nome_completo="Administrador do Sistema",
             login="admin",
             senha_hash=senha_hash,
@@ -38,7 +38,7 @@ def verificar_login(login, senha):
     Verifica as credenciais do usuário.
     Retorna a tupla do usuário se for válido, senão lança um erro.
     """
-    usuario_db = buscar_usuario_por_login(login)
+    usuario_db = db.buscar_usuario_por_login(login)
 
     # Usuário não encontrado
     if not usuario_db:
@@ -57,7 +57,7 @@ def verificar_login(login, senha):
 
 def listar_todos_usuarios():
     """Apenas repassa a listagem de usuários do banco."""
-    return listar_usuarios()
+    return db.listar_usuarios()
 
 def registrar_novo_usuario(nome_completo, login, senha, role):
     """
@@ -80,7 +80,7 @@ def registrar_novo_usuario(nome_completo, login, senha, role):
     # 3. Se tudo estiver OK, hashear a senha e salvar
     try:
         senha_hash = _hash_senha(senha)
-        adicionar_usuario(nome_completo, login, senha_hash, role) # <-- CORRETO! Salve o hash!
+        db.adicionar_usuario(nome_completo, login, senha_hash, role) # <-- CORRETO! Salve o hash!
         print(f"Novo usuario: '{login}' registrado com sucesso pela tela de admin.")
     except Exception as e:
         raise ValueError(f'Erro ao salvar no banco de dados: {e}')

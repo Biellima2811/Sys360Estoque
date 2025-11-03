@@ -1,4 +1,4 @@
-from database.db_manager import *
+from database import db_manager as db
 import bcrypt
 import re
 from sqlite3 import Error
@@ -15,7 +15,7 @@ def validar_e_processar_cliente(nome, telefone, email, cpf_cnpj, endereco):
 
     # 2. Validação de Regra de Negócio (CPF/CNPJ duplicado)
     if cpf_cnpj:
-        cliente_existente = buscar_cliente_por_cpf(cpf_cnpj)
+        cliente_existente = db.buscar_cliente_por_cpf(cpf_cnpj)
         if cliente_existente:
             raise ValueError(f"O CPF/CNPJ '{cpf_cnpj}' já está cadastrado para: {cliente_existente[1]}")
 
@@ -41,7 +41,7 @@ def registrar_novo_cliente(nome, telefone, email, cpf_cnpj, endereco):
         # 1. Valida os dados
         dados_validos = validar_e_processar_cliente(nome, telefone, email, cpf_cnpj, endereco)
         # 2. Envia para o banco de dados
-        adicionar_cliente(*dados_validos)# O '*' desempacota a tupla
+        db.adicionar_cliente(*dados_validos)# O '*' desempacota a tupla
         print(f"Novo cliente '{nome}' registrado com sucesso.")
     except (ValueError, Error) as e:
         # Pega erros de validação (ValueError) e erros de banco (Error, ex: duplicado)
@@ -50,4 +50,4 @@ def registrar_novo_cliente(nome, telefone, email, cpf_cnpj, endereco):
 
 def listar_todos_clientes():
     """Apenas repassa a listagem de clientes do banco."""
-    return listar_clientes()
+    return db.listar_clientes()
