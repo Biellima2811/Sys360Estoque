@@ -117,14 +117,14 @@ class TelaGerenciarUsuarios(tk.Toplevel):
 
             # 3. Sucesso, caso todas as informações bata com a base de dados 
             messagebox.showinfo("Sucesso", f"Usuario '{login}' foi criado com sucesso!")
-            self._limpar_campos_from()
+            self._limpar_campos_form()
             self._popular_tabela_usuarios() # Atualiza a lista de usuarios
         
         except ValueError as e:
             # 4. Falha (pega o erro do logic.py)
             messagebox.showerror("Erro de Validação", str(e), parent=self)
     
-    def _limpar_campos_from(self):
+    def _limpar_campos_form(self):
         """Limpa os campos de entrada do formulário."""
         self.entry_nome_completo.delete(0, 'end')
         self.entry_login.delete(0, 'end')

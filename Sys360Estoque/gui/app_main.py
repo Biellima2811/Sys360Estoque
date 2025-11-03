@@ -2,7 +2,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import os
-from database.db_manager import *
 # --- Imports da Lógica (Core) ---
 # Importa *módulos* específicos
 from core import logic_produtos as lg_produtos
@@ -45,8 +44,7 @@ class App(JanelaPai):
         
         # --- Inicializa o banco de dados ---
         # Garante que a tabela exista antes de qualquer operação
-        inicializar_db()
-
+        
         # --- Chamada da função que cria os widgets ---
         #self.criar_widgets()
 
@@ -283,7 +281,7 @@ class App(JanelaPai):
             preco = self.entry_preco.get()
 
             # 2. Envia para o 'logic.py' fazer o trabalho pesado
-            lg.adicionar_produto(nome, quantidade, preco)
+            ladicionar_produto(nome, quantidade, preco)
 
             # 3. Se deu certo, atualiza a interface
             messagebox.showinfo("Sucesso!", f"Produto {nome} adicionado com sucesso!")
@@ -311,7 +309,7 @@ class App(JanelaPai):
             preco = self.entry_preco.get()
 
             # 3. Envia para o 'logic.py'
-            lg.atualizar_produto(id_produto, nome, quantidade, preco)
+            lg_produtos.atualizar_produto(id_produto, nome, quantidade, preco)
 
             # 4. Se deu certo, atualiza a interface
             messagebox.showinfo("Sucesso!", 'Produto atualizado com sucesso!')
@@ -334,7 +332,7 @@ class App(JanelaPai):
                 id_produto = self.tabela_produtos.item(item_selecionado)['text']
 
                 # 2. Envia para o 'logic.py'
-                lg.remover_produto(id_produto)
+                lg_produtos.remover_produto(id_produto)
 
                 # 3. Se deu certo, atualiza a interface
                 messagebox.showinfo('Sucesso!', 'Produto foi removido com sucesso!')
@@ -352,7 +350,7 @@ class App(JanelaPai):
             nome_busca = self.entry_buscar_produto.get()
 
             # 1. Envia para o 'logic.py' (ele sabe o que fazer se estiver vazio)
-            resultados = lg.buscar_produtos(nome_busca)
+            resultados = lg_produtos.buscar_produtos(nome_busca)
 
             # 2. Atualiza a interface com os resultados
             self.popular_tabela(produtos_lista=resultados)
