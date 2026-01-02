@@ -18,8 +18,8 @@ if __name__ == "__main__":
     configurar_logger() # <--- INICIA O LOG AQUI
     try:   
         # (Movido do _backup_app.py para cá)
-        criar_primeiro_admin()
         inicializar_db()
+        criar_primeiro_admin()
         adicionar_categoria_padrao()
         # --- 1. Cria a App principal, mas a esconde ---
         app = App()
@@ -37,10 +37,6 @@ if __name__ == "__main__":
             app.usuario_logado = login_window.usuario_logado
             # SUCESSO!
             app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})") # [1] é o nome completo, fica mais bonito
-
-            # Constrói os widgets e popula a tabela
-            app.criar_widgets()
-            app.popular_tabela()
 
             # --- Lógica de Maximizar ---
             # 'zoomed' funciona no Windows. Para Linux use '-zoomed', True

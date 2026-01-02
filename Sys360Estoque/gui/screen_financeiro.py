@@ -84,7 +84,7 @@ class TelaFinanceiro(tk.Toplevel):
         self.entry_valor.grid(row=0, column=3, padx=5, pady=5)
 
         ttk.Label(frame_lancamento, text='Tipo').grid(row=0, column=4, padx=5, pady=5)
-        self.combo_tipo = ttk.Combobox(frame_lancamento, values=['saida', 'entrada'], state='readony', width=10)
+        self.combo_tipo = ttk.Combobox(frame_lancamento, values=['saida', 'entrada'], state='readonly', width=10)
         self.combo_tipo.set('saida') # Padrão saída (já que entrada vem de vendas)
         self.combo_tipo.grid(row=0, column=5, padx=5, pady=5)
 
