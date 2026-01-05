@@ -40,7 +40,7 @@ class Dashboard(ttk.Frame):
         self._criar_card(frame_cards, "Status do Sistema", 'Online', 2, 'gray')
     
     def _criar_card(self, parent, titulo, valor, col, cor_texto):
-        frame = ttk.Label(parent, text=titulo)
+        frame = ttk.LabelFrame(parent, text=titulo)
         frame.grid(row=0, column=col, padx=10, sticky='ew')
 
         lbl = ttk.Label(frame, text=valor, font=("Helvetica", 18, "bold"), foreground=cor_texto)

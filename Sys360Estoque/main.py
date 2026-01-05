@@ -36,14 +36,16 @@ if __name__ == "__main__":
         if login_window.usuario_logado:
             app.usuario_logado = login_window.usuario_logado
             # SUCESSO!
-            app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})") # [1] é o nome completo, fica mais bonito
+            app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})")
 
+            # --- CORREÇÃO AQUI: Carrega o Dashboard e Permissões ---
+            app._atualizar_permissoes_interface() # Habilita/Desabilita menus
+            app.mostrar_dashboard()               # <--- ESSA LINHA CARREGA A TELA
+            
             # --- Lógica de Maximizar ---
-            # 'zoomed' funciona no Windows. Para Linux use '-zoomed', True
             try:
                 app.state('zoomed') 
             except:
-                # Fallback para sistemas que não aceitam 'zoomed' (ex: Linux/Mac às vezes)
                 app.attributes('-zoomed', True)
             
             app.deiconify()

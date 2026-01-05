@@ -188,7 +188,7 @@ class TelaVendas(tk.Toplevel):
     def _atualizar_total(self):
         total = sum(item[4] for item in self.carrinho)
         self.valor_total_venda = total
-        self.lbl_total.config(text=f"TOTAL: R${total:.2f}")
+        self.lbl_total_grande.config(text=f"TOTAL: R${total:.2f}")
     
     def _finalizar_venda(self):
         if not self.carrinho:
