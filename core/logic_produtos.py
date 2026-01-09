@@ -101,3 +101,8 @@ def buscar_produtos(nome_busca):
 def listar_todos_produtos():
     """Apenas repassa a listagem do banco."""
     return db.listar_produtos()
+
+
+def obter_produto_por_id(id_produto):
+    """Busca os dados completos de um produto pelo ID."""
+    return db.buscar_produto_por_id(id_produto)

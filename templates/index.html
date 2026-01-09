@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sys360 - O ERP Definitivo</title>
+    <style>
+        :root {
+            --primary: #2980b9;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: var(--dark); color: white; }
+        
+        /* Header */
+        header { background: rgba(0,0,0,0.2); padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        .btn-download { background: var(--primary); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        .btn-download:hover { background: #3498db; transform: scale(1.05); }
+
+        /* Hero Section */
+        .hero { text-align: center; padding: 100px 20px; }
+        .hero h1 { font-size: 3rem; margin-bottom: 10px; }
+        .hero p { font-size: 1.2rem; color: #bdc3c7; max-width: 600px; margin: 0 auto 40px auto; }
+        
+        .mockup { 
+            max-width: 800px; width: 100%; 
+            border-radius: 10px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+
+        /* Features */
+        .features { display: flex; justify-content: center; gap: 20px; padding: 50px 20px; flex-wrap: wrap; }
+        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; width: 300px; text-align: center; }
+        .card h3 { color: var(--primary); }
+
+        /* Footer / Form */
+        footer { background: #1a252f; padding: 40px; text-align: center; }
+        input { padding: 10px; border-radius: 5px; border: none; margin: 5px; width: 250px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Sys360 ERP</div>
+        <a href="/download" class="btn-download">Baixar Versão Grátis v1.0</a>
+    </header>
+
+    <section class="hero">
+        <h1>Gestão Completa, Sem Complicação.</h1>
+        <p>Controle de Estoque, Vendas (PDV), Financeiro e Frota em um único sistema desktop rápido e seguro.</p>
+        
+        <img src="{{ url_for('static', filename='img/screenshot.png') }}" alt="Interface do Sys360" class="mockup">
+    </section>
+
+    <section class="features">
+        <div class="card">
+            <h3>🚀 PDV Ágil</h3>
+            <p>Frente de caixa ultra rápido com baixa automática de estoque.</p>
+        </div>
+        <div class="card">
+            <h3>💰 Financeiro</h3>
+            <p>Controle entradas e saídas e visualize seu lucro em tempo real.</p>
+        </div>
+        <div class="card">
+            <h3>🚚 Gestão de Frota</h3>
+            <p>Controle de veículos e calculadora inteligente de fretes com mapas.</p>
+        </div>
+    </section>
+
+    <footer>
+        <h3>Interessado no Código Fonte?</h3>
+        <p>Entre em contato para customizações ou suporte.</p>
+        <form action="/contato" method="POST">
+            <input type="text" name="nome" placeholder="Seu Nome" required>
+            <input type="email" name="email" placeholder="Seu E-mail" required>
+            <button type="submit" class="btn-download" style="border:none; cursor:pointer;">Falar com Desenvolvedor</button>
+        </form>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <p style="color: green; margin-top: 10px;">{{ messages[0] }}</p>
+          {% endif %}
+        {% endwith %}
+        
+        <p style="margin-top: 50px; font-size: 0.8rem; color: gray;">© 2026 Desenvolvido por Gabriel Levi</p>
+    </footer>
+
+</body>
+</html>

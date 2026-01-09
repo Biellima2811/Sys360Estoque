@@ -5,6 +5,7 @@ import os
 # Imports da Lógica
 from core import logic_vendas as lg_vendas
 from core import logic_produtos as lg_produtos
+from core import logic_clientes as lg_clientes
 
 class TelaVendas(tk.Toplevel):
     def __init__(self, parent): # <--- Corrigido com 't' no final
@@ -34,60 +35,76 @@ class TelaVendas(tk.Toplevel):
         self.wait_window() # janela de espera
 
     def _criar_widgets(self):
-        # --- Frame Principal ---
+        # --- Frame Principal (Fundo) ---
         frame_main = ttk.Frame(self, padding="10")
         frame_main.pack(fill='both', expand=True)
 
+        # === DIVISÃO EM DOIS PAINÉIS ===
+        
+        # Painel Esquerdo (Lista e Busca) - Pega todo o espaço disponível
+        painel_esquerdo = ttk.Frame(frame_main)
+        painel_esquerdo.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        # Painel Direito (Totais) - Fica fixo na direita
+        painel_direito = ttk.Frame(frame_main, padding="15", relief="sunken")
+        painel_direito.pack(side='right', fill='y')
+        
+        clintes_db = lg_clientes.listar_todos_clientes()
+        # Cria lista de strings: "ID - Nome"]
+        lista_clientes = [f"{c[0]} - {c[1]}" for c in clintes_db]
+        
+        self.combo_cliente = ttk.Combobox(painel_direito, values=lista_clientes)
+        self.combo_cliente.pack(fill='x', pady=(0, 20))
+
         # ======================================================
-        # 1. ÁREA DE INSERÇÃO DE PRODUTOS (TOPO)
+        # [ESQUERDA] 1. ÁREA DE INSERÇÃO (TOPO)
         # ======================================================
-        frame_topo = ttk.LabelFrame(frame_main, text="Adicionar Produto ao Carrinho")
-        frame_topo.pack(fill='x', padx=5, pady=5)
+        frame_topo = ttk.LabelFrame(painel_esquerdo, text="Adicionar Produto")
+        frame_topo.pack(fill='x', pady=(0, 10))
 
         # ID do Produto
-        ttk.Label(frame_topo, text='ID do Produto:').grid(row=0, column=0, padx=5, pady=5)
-        self.entry_id_produto = ttk.Entry(frame_topo, width=15)
-        self.entry_id_produto.grid(row=0, column=1, padx=5, pady=5)
-        self.entry_id_produto.bind('<Return>', lambda e: self.entry_qtd.focus())# Enter pula para qtd
+        ttk.Label(frame_topo, text='ID:').grid(row=0, column=0, padx=5, pady=10)
+        self.entry_id_produto = ttk.Entry(frame_topo, width=15, font=('Arial', 11))
+        self.entry_id_produto.grid(row=0, column=1, padx=5, pady=10)
+        # Ao dar Enter no ID, pula para Quantidade
+        self.entry_id_produto.bind('<Return>', lambda e: self.entry_qtd.focus())
 
-        # Botão de Busca Rápida (Opcional, mas útil)
+        # Botão Ajuda
         btn_buscar = ttk.Button(frame_topo, text='?', width=3, command=self._mostrar_ajuda_ids)
         btn_buscar.grid(row=0, column=2, padx=2)
 
         # Quantidade
-        ttk.Label(frame_topo, text="Quantidade").grid(row=0, column=3, padx=5, pady=5)
-        self.entry_qtd = ttk.Entry(frame_topo, width=10)
-        self.entry_qtd.insert(0, '1') # Valor padrão
-        self.entry_qtd.grid(row=0, column=4, padx=5, pady=5)
-        self.entry_qtd.bind('<Return>', lambda e: self_adicionar_item()) # Enter adiciona
+        ttk.Label(frame_topo, text="Qtd:").grid(row=0, column=3, padx=5, pady=10)
+        self.entry_qtd = ttk.Entry(frame_topo, width=8, font=('Arial', 11))
+        self.entry_qtd.insert(0, '1')
+        self.entry_qtd.grid(row=0, column=4, padx=5, pady=10)
+        # Ao dar Enter na Qtd, Adiciona o item
+        self.entry_qtd.bind('<Return>', lambda e: self._adicionar_item())
 
         # Botão Adicionar
-        btn_add = ttk.Button(frame_topo, text="Adicionar item (+)", command=self._adicionar_item)
-        btn_add.grid(row=0, column=6, padx=10, pady=5)
-
+        btn_add = ttk.Button(frame_topo, text="Incluir (+)", command=self._adicionar_item)
+        btn_add.grid(row=0, column=5, padx=15, pady=10)
 
         # ======================================================
-        # 2. CARRINHO DE COMPRAS (CENTRO)
+        # [ESQUERDA] 2. CARRINHO DE COMPRAS (CENTRO)
         # ======================================================
-
-        frame_carrinho = ttk.Label(frame_main, text="Carrinho de Compras")
-        frame_carrinho.pack(fill='both', expand=True, padx=5, pady=5)
+        frame_carrinho = ttk.LabelFrame(painel_esquerdo, text="Lista de Itens")
+        frame_carrinho.pack(fill='both', expand=True)
 
         colunas = ('id', 'nome', 'qtd', 'unitario', 'subtotal')
-        self.tree_carrinho = ttk.Treeview(frame_carrinho, columns=colunas, show='headings')
+        self.tree_carrinho = ttk.Treeview(frame_carrinho, columns=colunas, show='headings', selectmode="browse")
 
-        self.tree_carrinho.heading('id', text='COD')
         self.tree_carrinho.heading('id', text='Cód')
         self.tree_carrinho.heading('nome', text='Produto')
         self.tree_carrinho.heading('qtd', text='Qtd')
-        self.tree_carrinho.heading('unitario', text='Preço Unit.')
-        self.tree_carrinho.heading('subtotal', text='Subtotal')
+        self.tree_carrinho.heading('unitario', text='Unit.')
+        self.tree_carrinho.heading('subtotal', text='Total')
 
         self.tree_carrinho.column('id', width=50, anchor='center')
-        self.tree_carrinho.column('nome', width=300)
+        self.tree_carrinho.column('nome', width=250)
         self.tree_carrinho.column('qtd', width=50, anchor='center')
-        self.tree_carrinho.column('unitario', width=100, anchor='e')
-        self.tree_carrinho.column('subtotal', width=100, anchor='e')
+        self.tree_carrinho.column('unitario', width=80, anchor='e')
+        self.tree_carrinho.column('subtotal', width=80, anchor='e')
 
         self.tree_carrinho.pack(side='left', fill='both', expand=True)
 
@@ -95,21 +112,31 @@ class TelaVendas(tk.Toplevel):
         scrollbar.pack(side='right', fill='y')
         self.tree_carrinho.configure(yscrollcommand=scrollbar.set)
 
+        # Botão remover abaixo da lista
+        btn_rem = ttk.Button(painel_esquerdo, text="Remover Item Selecionado", command=self._remover_item_carrinho)
+        btn_rem.pack(side='bottom', anchor='e', pady=5)
+
         # ======================================================
-        # 3. RODAPÉ (TOTAL E FINALIZAR)
+        # [DIREITA] 3. TOTAIS E AÇÕES
         # ======================================================
-        frame_footer = ttk.Frame(frame_main)
-        frame_footer.pack(fill='x', padx=5, pady=10)
+        
+        ttk.Label(painel_direito, text="Subtotal", font=("Arial", 10)).pack(pady=(10, 0))
+        ttk.Label(painel_direito, text="Cliente:").pack(anchor="w", pady=(15, 5))
+        
+        # Total Gigante
+        self.lbl_total_grande = ttk.Label(painel_direito, text="R$ 0.00", font=("Arial", 30, "bold"), foreground="#2e8b57")
+        self.lbl_total_grande.pack(pady=(0, 20))
+        
+        ttk.Separator(painel_direito, orient='horizontal').pack(fill='x', pady=10)
+        
+        # Botões Grandes
+        btn_finalizar = ttk.Button(painel_direito, text="FINALIZAR (F5)", command=self._finalizar_venda, style="Accent.TButton")
+        btn_finalizar.pack(fill='x', ipady=10, pady=10)
+        
+        btn_cancelar = ttk.Button(painel_direito, text="Cancelar Venda", command=self.destroy)
+        btn_cancelar.pack(fill='x', ipady=5, pady=5)
 
-        # Label Total Gigante
-        self.lbl_total= ttk.Label(frame_footer, text="TOTAL: R$ 0.00", font=("Helvetica", 16, "bold"), foreground="blue")
-        self.lbl_total.pack(side='left', padx=10)
-
-        # Botão Finalizar
-        btn_finalizar = ttk.Button(frame_footer, text="FINALIZAR VENDA (F5)", command=self._finalizar_venda, style="Accent.TButton")
-        btn_finalizar.pack(side='right', padx=10, ipadx=10, ipady=5)
-
-        # Bind de tecla de atalho
+        # Atalho de teclado
         self.bind('<F5>', lambda e: self._finalizar_venda())
 
     def _adicionar_item(self):
@@ -170,9 +197,17 @@ class TelaVendas(tk.Toplevel):
     def _atualizar_total(self):
         total = sum(item[4] for item in self.carrinho)
         self.valor_total_venda = total
-        self.lbl_total.config(text=f"TOTAL: R${total:.2f}")
+        self.lbl_total_grande.config(text=f"TOTAL: R${total:.2f}")
     
     def _finalizar_venda(self):
+        cliente_selecionado = self.combo_cliente.get()
+        cliente_id = None
+
+        if cliente_selecionado:
+            cliente_id = int(cliente_selecionado.split(' - ')[0])
+        else:
+            pass
+
         if not self.carrinho:
             messagebox.showinfo("Atenção!!", "O carrinho está vazio!", parent=self)
             return
@@ -185,7 +220,7 @@ class TelaVendas(tk.Toplevel):
             usurio_id = self.usuario_atual[0]
 
             # Chama a lógica poderosa que faz a transação no BD
-            venda_id = lg_vendas.processar_venda_completa(usurio_id, self.carrinho)
+            venda_id = lg_vendas.processar_venda_completa(usurio_id, self.carrinho, cliente_id)
             messagebox.showinfo("Sucesso!!", f'Venda {venda_id} registrada com sucesso!')
 
             self.destroy() # Fecha a tela de vendas

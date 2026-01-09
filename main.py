@@ -17,9 +17,9 @@ if __name__ == "__main__":
     # --- 0. Inicializa Logs, DB e Admin ---
     configurar_logger() # <--- INICIA O LOG AQUI
     try:   
-        # (Movido do _backup_app.py para cá)
-        criar_primeiro_admin()
+        
         inicializar_db()
+        criar_primeiro_admin()
         adicionar_categoria_padrao()
         # --- 1. Cria a App principal, mas a esconde ---
         app = App()
@@ -36,18 +36,16 @@ if __name__ == "__main__":
         if login_window.usuario_logado:
             app.usuario_logado = login_window.usuario_logado
             # SUCESSO!
-            app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})") # [1] é o nome completo, fica mais bonito
+            app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})")
 
-            # Constrói os widgets e popula a tabela
-            app.criar_widgets()
-            app.popular_tabela()
-
+            # --- CORREÇÃO AQUI: Carrega o Dashboard e Permissões ---
+            app._atualizar_permissoes_interface() # Habilita/Desabilita menus
+            app.mostrar_dashboard()               # <--- ESSA LINHA CARREGA A TELA
+            
             # --- Lógica de Maximizar ---
-            # 'zoomed' funciona no Windows. Para Linux use '-zoomed', True
             try:
                 app.state('zoomed') 
             except:
-                # Fallback para sistemas que não aceitam 'zoomed' (ex: Linux/Mac às vezes)
                 app.attributes('-zoomed', True)
             
             app.deiconify()
