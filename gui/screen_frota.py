@@ -1,18 +1,9 @@
+# gui/screen_frota.py
 import tkinter as tk
 from tkinter import messagebox, ttk
 import os
-import ssl
-import certifi
-import tkintermapview
+import webbrowser # <--- Biblioteca nativa para abrir navegador
 from core import logic_frota
-import logging
-
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
 
 class TelaFrota(tk.Toplevel):
     def __init__(self, parent):
@@ -21,7 +12,6 @@ class TelaFrota(tk.Toplevel):
         self.geometry("900x700")
 
         caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
-        
         if os.path.exists(caminho_icone):
             self.iconbitmap(caminho_icone)
         
@@ -43,16 +33,19 @@ class TelaFrota(tk.Toplevel):
         self.frame_calc = ttk.Frame(self.notebook)
         self.notebook.add(self.frame_calc, text="🧮 Calculadora de Frete")
 
-        # Aba 3: Mapa
+        # Aba 3: Rastreamento (Google Maps)
         self.frame_mapa = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_mapa, text="🗺️ Mapa")
+        self.notebook.add(self.frame_mapa, text="🗺️ Rastreamento / Rotas")
 
         self._montar_aba_veiculos()
         self._montar_aba_calculadora()
+        self._montar_aba_mapa_navegador() # <--- Nova função
+
+    # ... (Os métodos _montar_aba_veiculos, _salvar_veiculo, _popular_tabela mantêm-se IGUAIS) ...
+    # Vou reescrever para garantir que você tenha o arquivo completo sem erros de indentação
 
     def _montar_aba_veiculos(self):
-        # --- Formulário ---
-        frame_form = ttk.Label(self.frame_veiculos)
+        frame_form = ttk.LabelFrame(self.frame_veiculos, text="Cadastro")
         frame_form.pack(fill='x', padx=15, pady=15)
 
         ttk.Label(frame_form, text='Placa:').grid(row=0, column=0, padx=5)
@@ -70,9 +63,7 @@ class TelaFrota(tk.Toplevel):
         btn_add = ttk.Button(frame_form, text="Salvar Veículo", command=self._salvar_veiculo, style="Accent.TButton")
         btn_add.grid(row=0, column=6, padx=10)
 
-        # --- Tabela ---
         cols = ('id', 'placa', 'modelo', 'status')
-
         self.tree_veiculos = ttk.Treeview(self.frame_veiculos, columns=cols, show='headings')
         self.tree_veiculos.heading('id', text='ID')
         self.tree_veiculos.heading('placa', text='Placa')
@@ -105,41 +96,53 @@ class TelaFrota(tk.Toplevel):
 
         ttk.Label(frame_calc, text="*Cálculo base: (Distância x2 / 10km/L * R$6.00) + Taxas", font=('Arial', 8)).pack(side='bottom', pady=10)
 
-    def _montar_aba_mapa(self):
-        # Cria o widget de mapa
-        self.mapa = tkintermapview.TkinterMapView(self.frame_mapa, width=800, height=600, corner_radius=0)
-        self.mapa.pack(fill="both", expand=True)
+    # --- AQUI ESTÁ A CORREÇÃO DO MAPA ---
+    def _montar_aba_mapa_navegador(self):
+        """Cria uma interface limpa que abre o Google Maps no navegador."""
+        frame_conteudo = ttk.Frame(self.frame_mapa, padding=40)
+        frame_conteudo.pack(fill='both', expand=True)
+
+        # Ícone ou Título Grande
+        ttk.Label(frame_conteudo, text="🌍 Rastreamento e Rotas", font=("Helvetica", 20, "bold")).pack(pady=(0, 20))
+
+        # Explicação
+        msg = ("Para garantir a melhor precisão de GPS e dados de trânsito em tempo real,\n"
+               "o Sys360 utiliza a integração direta com o Google Maps.")
+        ttk.Label(frame_conteudo, text=msg, font=("Arial", 11), justify="center").pack(pady=10)
+
+        # Entrada de Endereço
+        ttk.Label(frame_conteudo, text="Digite o endereço, CEP ou Coordenadas:", font=("Arial", 10, "bold")).pack(pady=(20, 5))
         
-        # Define local padrão (Ex: Brasil)
-        self.mapa.set_position(-14.2350, -51.9253) 
-        self.mapa.set_zoom(4)
+        self.ent_endereco_mapa = ttk.Entry(frame_conteudo, width=50, font=("Arial", 12))
+        self.ent_endereco_mapa.pack(pady=5, ipady=3)
+        self.ent_endereco_mapa.insert(0, "São Paulo, SP") # Exemplo padrão
+
+        # Botão Ação
+        btn_abrir = ttk.Button(frame_conteudo, text="Abrir no Google Maps ↗", command=self._abrir_google_maps, style="Accent.TButton")
+        btn_abrir.pack(pady=20, ipadx=10, ipady=5)
+
+    def _abrir_google_maps(self):
+        endereco = self.ent_endereco_mapa.get()
+        if not endereco:
+            messagebox.showwarning("Aviso", "Digite um endereço para buscar.")
+            return
         
-        # Campo para buscar endereço
-        frame_busca = ttk.Frame(self.frame_mapa)
-        frame_busca.place(relx=0.02, rely=0.02)
-        
-        self.ent_end = ttk.Entry(frame_busca, width=30)
-        self.ent_end.pack(side="left", padx=5)
-        ttk.Button(frame_busca, text="Ir", command=self._buscar_endereco).pack(side="left")
-    
-    def _buscar_endereco(self):
-        end = self.ent_end.get()
-        if end:
-            self.mapa.set_address(end)
+        # Codifica o endereço para URL e abre
+        # Ex: https://www.google.com/maps/search/Av+Paulista
+        base_url = "https://www.google.com/maps/search/?api=1&query="
+        webbrowser.open(base_url + endereco)
 
     def _salvar_veiculo(self):
         try:
             logic_frota.cadastrar_veiculo(
                 self.ent_placa.get(),
                 self.ent_modelo.get(),
-                "Generico", # Marca (pode adicionar campo depois)
-                2024, # Ano (pode adicionar campo depois)
+                "Generico", 
+                2024, 
                 self.ent_cap.get()
             )
-
             messagebox.showinfo("Sucesso", "Veículo salvo")
             self._popular_tabela()
-        
         except ValueError as e:
             messagebox.showerror("Erro", str(e))
     
@@ -149,7 +152,6 @@ class TelaFrota(tk.Toplevel):
         
         veiculos = logic_frota.listar_veiculos()
         for v in veiculos:
-            # v = (id, placa, modelo, marca, ano, cap, status)
             self.tree_veiculos.insert('', 'end', values=(v[0], v[1], v[2], v[6]))
     
     def _calcular(self):
