@@ -18,6 +18,7 @@ from .screen_financeiro import TelaFinanceiro        # Tela do módulo financeir
 from .screen_dashboard import Dashboard              # Tela inicial (dashboard)
 from .screen_frota import ScreenFrota
 from .screen_historico import TelaHistoricoVendas
+from .screen_analytics import TelaAnalytics
 
 try:
     from ttkthemes import ThemedTk    # Tenta importar suporte a temas visuais
@@ -98,14 +99,21 @@ class App(JanelaPai):
         menu_financeiro.add_command(
             label="Fluxo de Caixa", command=self.abrir_tela_financeiro
         )
+        # --- Menu Gestão / Analytics ---
+        menu_gestao = tk.Menu(self.menu_principal, tearoff=0)
+        self.menu_principal.add_cascade(label='Gestão', menu=menu_gestao)
+        menu_gestao.add_command(label='Dashboard & Gráficos',command=self.abrir_tela_analytics)
+        
         # --- Menu Frota ---
         menu_frota = tk.Menu(self.menu_principal, tearoff=0)
         self.menu_principal.add_cascade(label='Frota', menu=menu_frota)
         menu_frota.add_command(label='Veículos e Frete', command=self.abrir_tela_frota)
+        
         # --- Menu Ajuda ---
         menu_ajuda = tk.Menu(self.menu_principal, tearoff=0)
         self.menu_principal.add_cascade(label="Ajuda", menu=menu_ajuda)
         menu_ajuda.add_command(label="Sobre", command=self.mostrar_sobre)
+
 
     def criar_tela_estoque(self):
         self._limpar_container()      # Remove widgets anteriores do container
@@ -432,3 +440,6 @@ class App(JanelaPai):
     
     def abrir_tela_historico(self):
         TelaHistoricoVendas(self)
+    
+    def abrir_tela_analytics(self):
+        TelaAnalytics(self)
