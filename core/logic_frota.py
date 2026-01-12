@@ -1,61 +1,105 @@
-from database import db_manager as db
-import logging
+from database import db_manager
+import urllib.parse
 
-def cadastrar_veiculo(placa, modelo, marca ,ano, capacidade):
-    """Registra um novo veículo."""
-    if not placa or not modelo:
-        raise ValueError('Placa e Modelo são obrigatorios')
+# --- CADASTRO DE VEÍCULOS ---
+def adicionar_veiculo(modelo, placa, capacidade=0):
+    if not modelo or not placa:
+        raise ValueError("Modelo e Placa são obrigatórios")
     
-    conn = db.conectar()
-    
+    conn = db_manager.conectar()
     if not conn: return
     try:
         cursor = conn.cursor()
-        cursor.execute("""INSERT INTO veiculos (placa, modelo, marca, ano, capacidade_kg)
-                       VALUES (?, ?, ?, ?, ?)""", (placa.upper(), modelo, marca, ano, capacidade))
+        # Status padrão ao criar é 'disponivel'
+        cursor.execute("INSERT INTO veiculos (modelo, placa, capacidade_kg, status) VALUES (?, ?, ?, 'disponivel')", 
+                       (modelo, placa, capacidade))
         conn.commit()
-        logging.info(f'Veículo {placa}, foi cadastrado com sucesso!')
-
     except Exception as e:
-        logging.error(f'Erro ao cadastrar veiculo: {e}')
-        raise ValueError(f'Erro ao salvar (Verifique se a placa já existe na base): {e}')
-
-def listar_veiculos():
-    """Retorna todos os veículos."""
-    conn = db.conectar()
-    if not conn: return [] # Caso não tendo conexão retorne um lista
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM veiculos ORDER BY modelo')
-        return cursor.fetchall()
-    except Exception as e:
-        logging.error(f'Erro ao listar veículos: {e}')
-        return []
+        raise e
     finally:
         conn.close()
 
-
-def calcular_frete_estimado(distancia_km, peso_kg, custo_litro = 6.0, consumo_medio=10.0):
-    """
-    Calcula um frete base.
-    Fórmula simples: (Combustível gasto) + (Taxa por Kg) + Lucro/Margem
-    """
+def remover_veiculo(veiculo_id):
+    conn = db_manager.conectar()
+    if not conn: return
     try:
-        distancia = float(distancia_km)
-        peso = float(peso_kg)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM veiculos WHERE id = ?", (veiculo_id,))
+        conn.commit()
+    except Exception as e:
+        raise e
+    finally:
+        conn.close()
 
-        # Custo de Combustível (Ida e Volta)
-        litros_necessarios = (distancia * 2) / consumo_medio
-        custo_combustivel = litros_necessarios * custo_litro
+def listar_veiculos_disponiveis():
+    """Retorna lista de veículos (id, modelo, placa, status)."""
+    conn = db_manager.conectar()
+    if not conn: return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, modelo, placa, status FROM veiculos")
+        return cursor.fetchall()
+    finally:
+        conn.close()
 
-        # Adicional por peso (ex: R$ 0.10 por kg) e Taxa Fixa
-        taxa_peso = peso * 0.10
-        taxa_manuseio = 50.00
+# --- GESTÃO DE ENTREGAS ---
+def listar_entregas_pendentes():
+    """
+    Lista vendas com frete que estão 'pendente'.
+    DICA: Se você fez vendas antes da correção, elas podem não aparecer.
+    """
+    conn = db_manager.conectar()
+    if not conn: return []
+    try:
+        cursor = conn.cursor()
+        # Garante que pega status 'pendente' E frete > 0
+        sql = """
+            SELECT v.id, c.nome_completo, c.endereco, v.data_hora
+            FROM vendas v
+            LEFT JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.status_entrega = 'pendente' AND v.valor_frete > 0
+        """
+        cursor.execute(sql)
+        return cursor.fetchall()
+    finally:
+        conn.close()
 
-        total = custo_combustivel + taxa_peso + taxa_manuseio
+def criar_romaneio_entrega(veiculo_id, lista_venda_ids):
+    """Vincula as vendas ao veículo e muda status para 'em_rota'."""
+    conn = db_manager.conectar()
+    if not conn: return
+    try:
+        cursor = conn.cursor()
+        for vid in lista_venda_ids:
+            cursor.execute("""
+                UPDATE vendas 
+                SET status_entrega = 'em_rota', veiculo_id = ? 
+                WHERE id = ?
+            """, (veiculo_id, vid))
         
-        return total
-    except ValueError as e:
-        logging.error(f"Valores de distancia ou peso invalidos!: {e}")
-        raise ValueError (f"Valores de distancia ou peso invalidos!: {e}")
+        # Opcional: Atualizar status do veículo
+        cursor.execute("UPDATE veiculos SET status = 'em_rota' WHERE id = ?", (veiculo_id,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def gerar_link_rota(enderecos):
+    """Gera link do Google Maps otimizado."""
+    base_url = "https://www.google.com/maps/dir/"
+    
+    rota_parts = []
+    # Dica: Você pode descomentar a linha abaixo para fixar a saída da sua loja
+    # rota_parts.append(urllib.parse.quote("Av. Paulista, 1000, Sao Paulo")) 
+    
+    for end in enderecos:
+        if end and len(end.strip()) > 3:
+            rota_parts.append(urllib.parse.quote(end))
+    
+    if not rota_parts:
+        return "https://www.google.com/maps"
         
+    full_url = base_url + "/".join(rota_parts)
+    return full_url

@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
         # --- 2. Aplica o estilo ---
         estilo = ttk.Style(app)
-        estilo.configure("Accent.TButton", font=('Helvetica', 9, 'bold'))
+        estilo.configure("Accent.TButton", font=('Helvetica', 10, 'bold'))
 
         # --- 3. Mostra a Tela de Login ---
         login_window = TelaLogin(app)

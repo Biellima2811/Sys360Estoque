@@ -16,7 +16,7 @@ from .screen_clientes import TelaGerenciarClientes   # Tela de gerenciamento de 
 from .screen_vendas import TelaVendas                # Tela de vendas (PDV)
 from .screen_financeiro import TelaFinanceiro        # Tela do módulo financeiro
 from .screen_dashboard import Dashboard              # Tela inicial (dashboard)
-from .screen_frota import TelaFrota
+from .screen_frota import ScreenFrota
 from .screen_historico import TelaHistoricoVendas
 
 try:
@@ -308,7 +308,7 @@ class App(JanelaPai):
         TelaVendas(self)
 
     def abrir_tela_frota(self):
-        TelaFrota(self)
+        ScreenFrota(self)
         
     def abrir_tela_financeiro(self):
         if self.usuario_logado[4] in ['admin', 'gestor']:

@@ -1,165 +1,137 @@
-# gui/screen_frota.py
 import tkinter as tk
-from tkinter import messagebox, ttk
-import os
-import webbrowser # <--- Biblioteca nativa para abrir navegador
+from tkinter import ttk, messagebox
+import webbrowser
 from core import logic_frota
+import os
 
-class TelaFrota(tk.Toplevel):
+class ScreenFrota(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Sys360 - Gestão de Frota")
-        self.geometry("900x700")
-
-        caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
-        if os.path.exists(caminho_icone):
-            self.iconbitmap(caminho_icone)
+        self.title("Sys360 - Gestão de Expedição e Frota")
+        self.geometry("1150x700")
         
-        self._criar_tabs()
-        self._popular_tabela()
+        # Ícone
+        try:
+            caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
+            if os.path.exists(caminho_icone):
+                self.iconbitmap(caminho_icone)
+        except: pass
 
-        self.transient(parent)
+        self._criar_interface()
+        self.focus_force()
 
-    def _criar_tabs(self):
-        # Cria o sistema de Abas
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
-
-        # Aba 1: Veículos
-        self.frame_veiculos = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_veiculos, text="🚚 Gerenciar Veículos")
-
-        # Aba 2: Calculadora de Frete
-        self.frame_calc = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_calc, text="🧮 Calculadora de Frete")
-
-        # Aba 3: Rastreamento (Google Maps)
-        self.frame_mapa = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_mapa, text="🗺️ Rastreamento / Rotas")
-
-        self._montar_aba_veiculos()
-        self._montar_aba_calculadora()
-        self._montar_aba_mapa_navegador() # <--- Nova função
-
-    # ... (Os métodos _montar_aba_veiculos, _salvar_veiculo, _popular_tabela mantêm-se IGUAIS) ...
-    # Vou reescrever para garantir que você tenha o arquivo completo sem erros de indentação
-
-    def _montar_aba_veiculos(self):
-        frame_form = ttk.LabelFrame(self.frame_veiculos, text="Cadastro")
-        frame_form.pack(fill='x', padx=15, pady=15)
-
-        ttk.Label(frame_form, text='Placa:').grid(row=0, column=0, padx=5)
-        self.ent_placa = ttk.Entry(frame_form, width=15)
-        self.ent_placa.grid(row=0, column=1, padx=5)
-
-        ttk.Label(frame_form, text='Modelo:').grid(row=0, column=2, padx=5)
-        self.ent_modelo = ttk.Entry(frame_form, width=20)
-        self.ent_modelo.grid(row=0, column=3, padx=5)
-
-        ttk.Label(frame_form, text="Capacidade (Kg):").grid(row=0, column=4, padx=5)
-        self.ent_cap = ttk.Entry(frame_form, width=10)
-        self.ent_cap.grid(row=0,column=5, padx=5)
-
-        btn_add = ttk.Button(frame_form, text="Salvar Veículo", command=self._salvar_veiculo, style="Accent.TButton")
-        btn_add.grid(row=0, column=6, padx=10)
-
-        cols = ('id', 'placa', 'modelo', 'status')
-        self.tree_veiculos = ttk.Treeview(self.frame_veiculos, columns=cols, show='headings')
-        self.tree_veiculos.heading('id', text='ID')
-        self.tree_veiculos.heading('placa', text='Placa')
-        self.tree_veiculos.heading('modelo', text='Modelo')
-        self.tree_veiculos.heading('status', text='Status')
-
-        self.tree_veiculos.column('id', width=50)
-        self.tree_veiculos.column('placa', width=100)
-        self.tree_veiculos.column('modelo', width=150)
-        self.tree_veiculos.column('status', width=100)
-
-        self.tree_veiculos.pack(fill='both', expand=True, padx=10, pady=10)
-
-    def _montar_aba_calculadora(self):
-        frame_calc = ttk.LabelFrame(self.frame_calc, text='Simulação de Frete')
-        frame_calc.pack(fill='both', expand=True, padx=20, pady=20)
-
-        ttk.Label(frame_calc, text="Distancia (KM):", font=('Arial',12)).pack(pady=5)
-        self.ent_dist = ttk.Entry(frame_calc, font=('Arial', 12))
-        self.ent_dist.pack(pady=5)
-
-        ttk.Label(frame_calc, text="Peso da Carga (Kg):", font=('Arial', 12)).pack(pady=5)
-        self.ent_peso = ttk.Entry(frame_calc, font=('Arial', 12))
-        self.ent_peso.pack(pady=5)
-
-        ttk.Button(frame_calc, text='Calcular Custo', command=self._calcular).pack(pady=15, ipadx=10, ipady=5)
+    def _criar_interface(self):
+        # Topo
+        frame_topo = ttk.Frame(self)
+        frame_topo.pack(fill='x', padx=20, pady=10)
+        ttk.Label(frame_topo, text="🚚 Gestão de Frota & Expedição", font=("Segoe UI", 18, "bold")).pack(side='left')
         
-        self.lbl_resultado = ttk.Label(frame_calc, text="R$ 0.00", font=('Arial', 24, 'bold'), foreground='green')
-        self.lbl_resultado.pack(pady=10)
+        # Container Dividido
+        paned = ttk.PanedWindow(self, orient='horizontal')
+        paned.pack(fill='both', expand=True, padx=10, pady=5)
 
-        ttk.Label(frame_calc, text="*Cálculo base: (Distância x2 / 10km/L * R$6.00) + Taxas", font=('Arial', 8)).pack(side='bottom', pady=10)
+        # --- ESQUERDA: Veículos ---
+        frame_esq = ttk.Frame(paned)
+        paned.add(frame_esq, weight=1)
 
-    # --- AQUI ESTÁ A CORREÇÃO DO MAPA ---
-    def _montar_aba_mapa_navegador(self):
-        """Cria uma interface limpa que abre o Google Maps no navegador."""
-        frame_conteudo = ttk.Frame(self.frame_mapa, padding=40)
-        frame_conteudo.pack(fill='both', expand=True)
-
-        # Ícone ou Título Grande
-        ttk.Label(frame_conteudo, text="🌍 Rastreamento e Rotas", font=("Helvetica", 20, "bold")).pack(pady=(0, 20))
-
-        # Explicação
-        msg = ("Para garantir a melhor precisão de GPS e dados de trânsito em tempo real,\n"
-               "o Sys360 utiliza a integração direta com o Google Maps.")
-        ttk.Label(frame_conteudo, text=msg, font=("Arial", 11), justify="center").pack(pady=10)
-
-        # Entrada de Endereço
-        ttk.Label(frame_conteudo, text="Digite o endereço, CEP ou Coordenadas:", font=("Arial", 10, "bold")).pack(pady=(20, 5))
+        # Cadastro Rápido
+        frame_cad = ttk.LabelFrame(frame_esq, text="Novo Veículo", padding=10)
+        frame_cad.pack(fill='x', padx=5, pady=5)
         
-        self.ent_endereco_mapa = ttk.Entry(frame_conteudo, width=50, font=("Arial", 12))
-        self.ent_endereco_mapa.pack(pady=5, ipady=3)
-        self.ent_endereco_mapa.insert(0, "São Paulo, SP") # Exemplo padrão
+        ttk.Label(frame_cad, text="Modelo:").grid(row=0, column=0, sticky='w')
+        self.entry_modelo = ttk.Entry(frame_cad, width=15)
+        self.entry_modelo.grid(row=0, column=1, padx=5, sticky='ew')
+        
+        ttk.Label(frame_cad, text="Placa:").grid(row=1, column=0, sticky='w')
+        self.entry_placa = ttk.Entry(frame_cad, width=15)
+        self.entry_placa.grid(row=1, column=1, padx=5, sticky='ew')
+        
+        ttk.Button(frame_cad, text="Salvar", command=self.adicionar_veiculo).grid(row=2, column=0, columnspan=2, pady=5, sticky='ew')
 
-        # Botão Ação
-        btn_abrir = ttk.Button(frame_conteudo, text="Abrir no Google Maps ↗", command=self._abrir_google_maps, style="Accent.TButton")
-        btn_abrir.pack(pady=20, ipadx=10, ipady=5)
+        # Lista Veículos
+        frame_lista_v = ttk.LabelFrame(frame_esq, text="Veículos Disponíveis")
+        frame_lista_v.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        cols_v = ('id', 'modelo', 'placa', 'status')
+        self.tree_v = ttk.Treeview(frame_lista_v, columns=cols_v, show='headings')
+        self.tree_v.heading('id', text='ID'); self.tree_v.column('id', width=30)
+        self.tree_v.heading('modelo', text='Modelo'); self.tree_v.column('modelo', width=100)
+        self.tree_v.heading('placa', text='Placa'); self.tree_v.column('placa', width=80)
+        self.tree_v.heading('status', text='Status'); self.tree_v.column('status', width=80)
+        self.tree_v.pack(fill='both', expand=True)
 
-    def _abrir_google_maps(self):
-        endereco = self.ent_endereco_mapa.get()
-        if not endereco:
-            messagebox.showwarning("Aviso", "Digite um endereço para buscar.")
+        # --- DIREITA: Entregas ---
+        frame_dir = ttk.LabelFrame(paned, text="📦 Entregas Pendentes (Selecione Várias)")
+        paned.add(frame_dir, weight=2)
+        
+        cols_e = ('id', 'cliente', 'endereco', 'data')
+        self.tree_e = ttk.Treeview(frame_dir, columns=cols_e, show='headings')
+        self.tree_e.heading('id', text='Venda'); self.tree_e.column('id', width=50)
+        self.tree_e.heading('cliente', text='Cliente'); self.tree_e.column('cliente', width=150)
+        self.tree_e.heading('endereco', text='Endereço'); self.tree_e.column('endereco', width=250)
+        self.tree_e.heading('data', text='Data'); self.tree_e.column('data', width=100)
+        self.tree_e.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Ações
+        frame_bot = ttk.Frame(self)
+        frame_bot.pack(fill='x', padx=20, pady=10)
+        
+        ttk.Button(frame_bot, text="🔄 Atualizar Listas", command=self.carregar_dados).pack(side='left')
+        ttk.Button(frame_bot, text="🗺️ Gerar Rota (Google Maps)", command=self.gerar_rota).pack(side='right')
+
+        self.carregar_dados()
+
+    def carregar_dados(self):
+        # Limpa tudo
+        for i in self.tree_v.get_children(): self.tree_v.delete(i)
+        for i in self.tree_e.get_children(): self.tree_e.delete(i)
+        
+        # Preenche Veículos
+        for v in logic_frota.listar_veiculos_disponiveis():
+            self.tree_v.insert('', 'end', values=v)
+            
+        # Preenche Entregas
+        for e in logic_frota.listar_entregas_pendentes():
+            # Trata endereço vazio
+            end = e[2] if e[2] else "---"
+            self.tree_e.insert('', 'end', values=(e[0], e[1], end, e[3]))
+
+    def adicionar_veiculo(self):
+        try:
+            logic_frota.adicionar_veiculo(self.entry_modelo.get(), self.entry_placa.get())
+            messagebox.showinfo("Sucesso", "Veículo adicionado!")
+            self.entry_modelo.delete(0, 'end'); self.entry_placa.delete(0, 'end')
+            self.carregar_dados()
+        except Exception as e:
+            messagebox.showerror("Erro", str(e))
+
+    def gerar_rota(self):
+        # 1. Pega Veículo
+        sel_v = self.tree_v.selection()
+        if not sel_v:
+            messagebox.showwarning("Ops", "Selecione um veículo na esquerda.")
+            return
+        v_id = self.tree_v.item(sel_v[0])['values'][0]
+
+        # 2. Pega Entregas
+        sel_e = self.tree_e.selection()
+        if not sel_e:
+            messagebox.showwarning("Ops", "Selecione as entregas na direita.")
             return
         
-        # Codifica o endereço para URL e abre
-        # Ex: https://www.google.com/maps/search/Av+Paulista
-        base_url = "https://www.google.com/maps/search/?api=1&query="
-        webbrowser.open(base_url + endereco)
+        vendas_ids = []
+        enderecos = []
+        for item in sel_e:
+            vals = self.tree_e.item(item)['values']
+            vendas_ids.append(vals[0])
+            enderecos.append(vals[2])
 
-    def _salvar_veiculo(self):
-        try:
-            logic_frota.cadastrar_veiculo(
-                self.ent_placa.get(),
-                self.ent_modelo.get(),
-                "Generico", 
-                2024, 
-                self.ent_cap.get()
-            )
-            messagebox.showinfo("Sucesso", "Veículo salvo")
-            self._popular_tabela()
-        except ValueError as e:
-            messagebox.showerror("Erro", str(e))
-    
-    def _popular_tabela(self):
-        for i in self.tree_veiculos.get_children():
-            self.tree_veiculos.delete(i)
-        
-        veiculos = logic_frota.listar_veiculos()
-        for v in veiculos:
-            self.tree_veiculos.insert('', 'end', values=(v[0], v[1], v[2], v[6]))
-    
-    def _calcular(self):
-        try:
-            total = logic_frota.calcular_frete_estimado(
-                self.ent_dist.get(),
-                self.ent_peso.get()
-            )
-            self.lbl_resultado.config(text=f'R$ {total:.2f}')
-        except ValueError:
-            messagebox.showerror("Erro", 'Digite números validos')
+        # 3. Executa
+        if messagebox.askyesno("Confirmar", f"Despachar {len(vendas_ids)} entregas?"):
+            try:
+                logic_frota.criar_romaneio_entrega(v_id, vendas_ids)
+                link = logic_frota.gerar_link_rota(enderecos)
+                webbrowser.open(link)
+                self.carregar_dados()
+            except Exception as e:
+                messagebox.showerror("Erro", str(e))
