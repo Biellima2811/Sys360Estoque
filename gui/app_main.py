@@ -19,6 +19,7 @@ from .screen_dashboard import Dashboard              # Tela inicial (dashboard)
 from .screen_frota import ScreenFrota
 from .screen_historico import TelaHistoricoVendas
 from .screen_analytics import TelaAnalytics
+from .screen_config import TelaConfiguracao
 
 try:
     from ttkthemes import ThemedTk    # Tenta importar suporte a temas visuais
@@ -71,6 +72,11 @@ class App(JanelaPai):
         menu_arquivo.add_separator()                # Linha separadora
         menu_arquivo.add_command(label="Fazer Logoff", command=self.realizar_logoff)
         menu_arquivo.add_command(label="Sair", command=self.quit)
+
+        # Menu Administração (Novo)
+        menu_admin = tk.Menu(self.menu_principal, tearoff=0)
+        self.menu_principal.add_cascade(label="Administração", menu=menu_admin)
+        menu_admin.add_command(label="Configurar Rede/Banco", command=self.abrir_tela_config)
         
         # --- Menu Cadastros ---
         self.menu_cadastros = tk.Menu(self.menu_principal, tearoff=0)
@@ -443,3 +449,6 @@ class App(JanelaPai):
     
     def abrir_tela_analytics(self):
         TelaAnalytics(self)
+    
+    def abrir_tela_config(self):
+        TelaConfiguracao(self)

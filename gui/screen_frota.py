@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import webbrowser
-from core import logic_frota
+import urllib.parse
 import os
+from core import logic_frota
+from database import db_manager  # Importação correta do banco
 
 class ScreenFrota(tk.Toplevel):
     def __init__(self, parent):
@@ -10,7 +12,7 @@ class ScreenFrota(tk.Toplevel):
         self.title("Sys360 - Gestão de Expedição e Frota")
         self.geometry("1150x700")
         
-        # Ícone
+        # Ícone (Corrigido 'Tente' para 'try')
         try:
             caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
             if os.path.exists(caminho_icone):
@@ -61,9 +63,10 @@ class ScreenFrota(tk.Toplevel):
         self.tree_v.pack(fill='both', expand=True)
 
         # --- DIREITA: Entregas ---
-        frame_dir = ttk.LabelFrame(paned, text="📦 Entregas Pendentes (Selecione Várias)")
+        frame_dir = ttk.LabelFrame(paned, text="📦 Entregas Pendentes (Selecione para Rota)")
         paned.add(frame_dir, weight=2)
         
+        # Colunas: 0=ID, 1=Cliente, 2=Endereço, 3=Data
         cols_e = ('id', 'cliente', 'endereco', 'data')
         self.tree_e = ttk.Treeview(frame_dir, columns=cols_e, show='headings')
         self.tree_e.heading('id', text='Venda'); self.tree_e.column('id', width=50)
@@ -77,7 +80,8 @@ class ScreenFrota(tk.Toplevel):
         frame_bot.pack(fill='x', padx=20, pady=10)
         
         ttk.Button(frame_bot, text="🔄 Atualizar Listas", command=self.carregar_dados).pack(side='left')
-        ttk.Button(frame_bot, text="🗺️ Gerar Rota (Google Maps)", command=self.gerar_rota).pack(side='right')
+        # O botão agora chama a nova função inteligente
+        ttk.Button(frame_bot, text="🗺️ Gerar Rota (Google Maps)", command=self.gerar_rota_inteligente).pack(side='right')
 
         self.carregar_dados()
 
@@ -105,33 +109,52 @@ class ScreenFrota(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("Erro", str(e))
 
-    def gerar_rota(self):
-        # 1. Pega Veículo
-        sel_v = self.tree_v.selection()
-        if not sel_v:
-            messagebox.showwarning("Ops", "Selecione um veículo na esquerda.")
-            return
-        v_id = self.tree_v.item(sel_v[0])['values'][0]
-
-        # 2. Pega Entregas
+    def gerar_rota_inteligente(self):
+        """
+        Função unificada que gera a rota considerando a Origem da Empresa
+        e múltiplos destinos selecionados.
+        """
+        # 1. Verifica Seleção
         sel_e = self.tree_e.selection()
         if not sel_e:
-            messagebox.showwarning("Ops", "Selecione as entregas na direita.")
+            messagebox.showwarning("Aviso", "Selecione pelo menos uma entrega na lista da direita.")
             return
-        
-        vendas_ids = []
-        enderecos = []
+
+        # 2. Pega endereço de Origem (Empresa)
+        dados_empresa = db_manager.obter_dados_empresa()
+        endereco_origem = ""
+        if dados_empresa and dados_empresa[1]:
+            endereco_origem = dados_empresa[1]
+
+        # 3. Coleta os destinos selecionados
+        enderecos_destino = []
         for item in sel_e:
             vals = self.tree_e.item(item)['values']
-            vendas_ids.append(vals[0])
-            enderecos.append(vals[2])
+            # O endereço é o índice 2 (conforme definido nas colunas)
+            end_cliente = vals[2]
+            if end_cliente and end_cliente != "---":
+                enderecos_destino.append(end_cliente)
+        
+        if not enderecos_destino:
+            messagebox.showwarning("Erro", "As entregas selecionadas não possuem endereço válido.")
+            return
 
-        # 3. Executa
-        if messagebox.askyesno("Confirmar", f"Despachar {len(vendas_ids)} entregas?"):
-            try:
-                logic_frota.criar_romaneio_entrega(v_id, vendas_ids)
-                link = logic_frota.gerar_link_rota(enderecos)
-                webbrowser.open(link)
-                self.carregar_dados()
-            except Exception as e:
-                messagebox.showerror("Erro", str(e))
+        # 4. Monta a URL do Google Maps
+        # Formato: https://www.google.com/maps/dir/Origem/Destino1/Destino2...
+        
+        base_url = "https://www.google.com/maps/dir"
+        rota_parts = []
+        
+        # Se tiver origem cadastrada, ela é o primeiro ponto
+        if endereco_origem:
+            rota_parts.append(urllib.parse.quote(endereco_origem))
+        
+        # Adiciona os destinos
+        for end in enderecos_destino:
+            rota_parts.append(urllib.parse.quote(end))
+            
+        # Junta tudo com barras "/"
+        url_final = f"{base_url}/{'/'.join(rota_parts)}"
+        
+        # 5. Abre no Navegador
+        webbrowser.open(url_final)

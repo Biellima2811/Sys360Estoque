@@ -12,6 +12,8 @@ from core.logic_financeiro import adicionar_categoria_padrao
 from gui.app_main import App
 from gui.screen_login import TelaLogin
 
+
+
 if __name__ == "__main__":
     
     # --- 0. Inicializa Logs, DB e Admin ---
@@ -23,6 +25,7 @@ if __name__ == "__main__":
         adicionar_categoria_padrao()
         # --- 1. Cria a App principal, mas a esconde ---
         app = App()
+        
         app.withdraw()
 
         # --- 2. Aplica o estilo ---
