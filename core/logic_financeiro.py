@@ -97,3 +97,29 @@ def listar_movimentacoes():
         return []
     finally:
         conn.close()
+
+def registrar_movimento(descricao, valor_str, tipo):
+    """
+    Registra uma movimentação financeira manual.
+    tipo: 'Receita' ou 'Despesa' (Vem do Combobox)
+    """
+    # 1. Tratamento de Dados
+    try:
+        valor = float(valor_str.replace(',', '.'))
+    except ValueError:
+        raise ValueError("Valor inválido.")
+    
+    if valor <= 0:
+        raise ValueError("O valor deve ser positivo.")
+
+    # Converte 'Receita' -> 'entrada' e 'Despesa' -> 'saida' para padronizar com o banco
+    tipo_db = 'entrada' if tipo.lower() == 'receita' else 'saida'
+    
+    # 2. Salva no Banco (Usando uma função genérica ou SQL direto)
+    # Se não tiver função específica no db_manager, usamos conexão direta aqui
+    # Mas o ideal é ter no db_manager. Vou adicionar lá embaixo.
+    db.adicionar_movimentacao_manual(descricao, valor, tipo_db)
+
+def listar_movimentacoes():
+    """Retorna todas as movimentações ordenadas por data."""
+    return db.listar_movimentacoes()

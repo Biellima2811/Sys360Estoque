@@ -1,454 +1,148 @@
-# gui/app_main.py
-# Arquivo principal da aplicação gráfica (GUI) usando Tkinter
+import tkinter as tk
+from tkinter import messagebox, ttk
+import os
 
-import tkinter as tk                  # Importa o módulo base do Tkinter
-from tkinter import messagebox, ttk   # Importa caixas de diálogo e widgets temáticos
-import os                             # Importa funções para manipulação de caminhos e arquivos
-
-# --- Imports da Lógica (Core) ---
-from core import logic_produtos as lg_produtos   # Lógica de negócio relacionada a produtos
-from core import logic_usuarios as lg_usuarios   # Lógica de negócio relacionada a usuários
-from core import logic_clientes as lg_clientes   # Lógica de negócio relacionada a clientes
-
-# --- Imports da GUI (Telas) ---
-from .screen_admin import TelaGerenciarUsuarios      # Tela de gerenciamento de usuários
-from .screen_clientes import TelaGerenciarClientes   # Tela de gerenciamento de clientes
-from .screen_vendas import TelaVendas                # Tela de vendas (PDV)
-from .screen_financeiro import TelaFinanceiro        # Tela do módulo financeiro
-from .screen_dashboard import Dashboard              # Tela inicial (dashboard)
-from .screen_frota import ScreenFrota
-from .screen_historico import TelaHistoricoVendas
-from .screen_analytics import TelaAnalytics
-from .screen_config import TelaConfiguracao
+# Telas
+from gui.screen_dashboard import Dashboard
+from gui.screen_estoque import TelaEstoque  # <--- Importamos a nova tela
+from gui.screen_vendas import TelaVendas
+from gui.screen_financeiro import TelaFinanceiro
+from gui.screen_clientes import TelaGerenciarClientes
+from gui.screen_frota import ScreenFrota
+from gui.screen_historico import TelaHistoricoVendas
+from gui.screen_analytics import TelaAnalytics
+from gui.screen_config import TelaConfiguracao
+from gui.screen_admin import TelaGerenciarUsuarios
 
 try:
-    from ttkthemes import ThemedTk    # Tenta importar suporte a temas visuais
-    JanelaPai = ThemedTk              # Define a janela principal com suporte a temas
+    from ttkthemes import ThemedTk
+    JanelaPai = ThemedTk
 except ImportError:
-    JanelaPai = tk.Tk                # Caso falhe, usa Tk padrão como janela principal
+    JanelaPai = tk.Tk
 
 class App(JanelaPai):
     def __init__(self):
-        super().__init__()            # Inicializa a classe pai (Tk ou ThemedTk)
-
-        # --- Aplica o tema (se disponível) ---
-        if JanelaPai == ThemedTk:     # Verifica se o suporte a temas está disponível
-            self.set_theme("clearlooks")  # Define o tema visual
+        super().__init__()
         
-        self.title("Sys360 - Controle de Estoque")  # Define o título da janela
-        self.geometry("850x550")                   # Define o tamanho inicial da janela
-        self.resizable(True, True)                 # Permite redimensionamento
+        # Tema Moderno
+        if JanelaPai == ThemedTk:
+            self.set_theme("arc") # Um tema clean, azulado e moderno
 
-        # --- Define o Ícone ---
-        caminho_icone = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico")
-        )                                          # Monta o caminho absoluto do ícone
-        if os.path.exists(caminho_icone):          # Verifica se o ícone existe
-            self.iconbitmap(caminho_icone)         # Define o ícone da aplicação
+        self.title("Sys360 ERP - Gestão Integrada")
+        self.geometry("1200x700")
+        self.minsize(1000, 600)
 
-        self.usuario_logado = None                 # Armazena o usuário autenticado
+        # Ícone
+        try:
+            caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
+            if os.path.exists(caminho_icone): self.iconbitmap(caminho_icone)
+        except: pass
+
+        self.usuario_logado = None
         
-        # Container Principal
-        self.container_principal = ttk.Frame(self) # Frame principal que recebe as telas
-        self.container_principal.pack(fill="both", expand=True)  # Expande em toda a janela
+        # --- ESTILOS CUSTOMIZADOS (Menu Lateral) ---
+        style = ttk.Style()
+        style.configure("Sidebar.TFrame", background="#2c3e50") # Azul escuro
+        style.configure("Sidebar.TLabel", background="#2c3e50", foreground="white", font=("Segoe UI", 12))
+        
+        # Estilo dos Botões do Menu
+        style.configure("Menu.TButton", 
+                        font=("Segoe UI", 11), 
+                        padding=10, 
+                        anchor="w",
+                        background="#2c3e50",
+                        foreground="black") 
+        
+        # Layout Principal (Sidebar + Conteúdo)
+        self.main_container = tk.Frame(self)
+        self.main_container.pack(fill='both', expand=True)
 
-        self.frames = {}                           # Dicionário para possíveis telas
-
-        # Inicializa o menu
-        self.criar_menus() 
-
-        # O dashboard será carregado pelo main.py após o login
+        self._criar_sidebar()
+        self._criar_area_conteudo()
+        
+        # Inicia no Dashboard (se logado) ou Login
+        # Nota: A lógica de login chama self.mostrar_dashboard() depois
     
-    
-    def criar_menus(self):
-        """Cria a barra de menus superior."""
-        self.menu_principal = tk.Menu(self)        # Cria a barra de menus
-        self.config(menu=self.menu_principal)      # Associa o menu à janela
+    def _criar_sidebar(self):
+        """Cria o menu lateral moderno."""
+        self.sidebar = ttk.Frame(self.main_container, style="Sidebar.TFrame", width=250)
+        self.sidebar.pack(side='left', fill='y')
+        self.sidebar.pack_propagate(False) # Mantém a largura fixa
 
-        # --- Menu Arquivo ---
-        menu_arquivo = tk.Menu(self.menu_principal, tearoff=0)  # Menu Arquivo
-        self.menu_principal.add_cascade(label="Arquivo", menu=menu_arquivo)
-        menu_arquivo.add_command(label="Início / Dashboard", command=self.mostrar_dashboard)
-        menu_arquivo.add_separator()                # Linha separadora
-        menu_arquivo.add_command(label="Fazer Logoff", command=self.realizar_logoff)
-        menu_arquivo.add_command(label="Sair", command=self.quit)
-
-        # Menu Administração (Novo)
-        menu_admin = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label="Administração", menu=menu_admin)
-        menu_admin.add_command(label="Configurar Rede/Banco", command=self.abrir_tela_config)
+        # Logo / Título
+        lbl_logo = ttk.Label(self.sidebar, text="Sys360", style="Sidebar.TLabel", font=("Segoe UI", 20, "bold"))
+        lbl_logo.pack(pady=(30, 10))
         
-        # --- Menu Cadastros ---
-        self.menu_cadastros = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label="Cadastro", menu=self.menu_cadastros)
-        self.menu_cadastros.add_command(
-            label="Gerenciar Usuarios", command=self.abrir_tela_gerenciar_usuarios
-        )
-        self.menu_cadastros.add_command(
-            label="Gerenciar Clientes", command=self.abrir_tela_gerenciar_clientes
-        )
+        ttk.Label(self.sidebar, text="Enterprise System", style="Sidebar.TLabel", font=("Arial", 9)).pack(pady=(0, 30))
+
+        # Botões de Navegação
+        # Dica: Use emojis como ícones se não tiver imagens PNG
+        self._criar_botao_menu("📊 Dashboard", self.mostrar_dashboard)
+        self._criar_botao_menu("🛒 Nova Venda (PDV)", self.abrir_tela_vendas)
+        self._criar_botao_menu("📦 Estoque", self.abrir_tela_estoque)
+        self._criar_botao_menu("👥 Clientes", self.abrir_tela_gerenciar_clientes)
+        self._criar_botao_menu("🚚 Frota & Entrega", self.abrir_tela_frota)
+        self._criar_botao_menu("💰 Financeiro", self.abrir_tela_financeiro)
         
-        # --- Menu Vendas ---
-        menu_operacoes = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label="Vendas", menu=menu_operacoes)
+        # Separador visual
+        tk.Frame(self.sidebar, height=1, bg="#7f8c8d").pack(fill='x', padx=20, pady=20)
         
-        menu_operacoes.add_command(
-            label="Nova Venda (PDV)", command=self.abrir_tela_vendas
-        )
-        menu_operacoes.add_separator()
-        menu_operacoes.add_command(label="Histórico de Vendas", command=self.abrir_tela_historico)
-
-
-        # --- Menu Financeiro ---
-        menu_financeiro = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label='Financeiro', menu=menu_financeiro)
-        menu_financeiro.add_command(
-            label="Fluxo de Caixa", command=self.abrir_tela_financeiro
-        )
-        # --- Menu Gestão / Analytics ---
-        menu_gestao = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label='Gestão', menu=menu_gestao)
-        menu_gestao.add_command(label='Dashboard & Gráficos',command=self.abrir_tela_analytics)
+        self._criar_botao_menu("⚙️ Configurações", self.abrir_tela_config)
+        self._criar_botao_menu("❌ Sair", self.realizar_logoff)
         
-        # --- Menu Frota ---
-        menu_frota = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label='Frota', menu=menu_frota)
-        menu_frota.add_command(label='Veículos e Frete', command=self.abrir_tela_frota)
-        
-        # --- Menu Ajuda ---
-        menu_ajuda = tk.Menu(self.menu_principal, tearoff=0)
-        self.menu_principal.add_cascade(label="Ajuda", menu=menu_ajuda)
-        menu_ajuda.add_command(label="Sobre", command=self.mostrar_sobre)
+        # Info Usuário no Rodapé da Sidebar
+        self.lbl_usuario = ttk.Label(self.sidebar, text="...", style="Sidebar.TLabel", font=("Arial", 9))
+        self.lbl_usuario.pack(side='bottom', pady=20)
 
+    def _criar_botao_menu(self, texto, comando):
+        """Helper para criar botões padronizados."""
+        btn = ttk.Button(self.sidebar, text=texto, command=comando, style="Menu.TButton")
+        btn.pack(fill='x', padx=10, pady=5)
 
-    def criar_tela_estoque(self):
-        self._limpar_container()      # Remove widgets anteriores do container
-        
-        # Frame de Dados (Formulário)
-        frame_dados = ttk.LabelFrame(
-            self.container_principal, text="Dados do Produto"
-        )
-        frame_dados.pack(fill='x', padx=10, pady=5)
-
-        # LINHA 0
-        ttk.Label(frame_dados, text="Nome do Produto:").grid(
-            row=0, column=0, padx=5, pady=5, sticky='w'
-        )
-        self.entry_nome_produto = ttk.Entry(frame_dados, width=30)
-        self.entry_nome_produto.grid(
-            row=0, column=1, padx=5, pady=5, sticky="ew"
-        )
-
-        ttk.Label(frame_dados, text="Categoria:").grid(
-            row=0, column=2, padx=5, pady=5, sticky='w'
-        )
-        self.entry_categoria = ttk.Entry(frame_dados, width=20)
-        self.entry_categoria.grid(
-            row=0, column=3, padx=5, pady=5, sticky="ew"
-        )
-
-        # LINHA 1
-        ttk.Label(frame_dados, text="Quantidade:").grid(
-            row=1, column=0, padx=5, pady=5, sticky='w'
-        )
-        self.entry_qtde = ttk.Entry(frame_dados, width=15)
-        self.entry_qtde.grid(
-            row=1, column=1, padx=5, pady=5, sticky="w"
-        )
-
-        ttk.Label(frame_dados, text="Fornecedor:").grid(
-            row=1, column=2, padx=5, pady=5, sticky='w'
-        )
-        self.entry_fornecedor = ttk.Entry(frame_dados, width=20)
-        self.entry_fornecedor.grid(
-            row=1, column=3, padx=5, pady=5, sticky="ew"
-        )
-
-        # LINHA 2
-        ttk.Label(frame_dados, text="Preço Custo (R$):").grid(
-            row=2, column=0, padx=5, pady=5, sticky='w'
-        )
-        self.entry_preco_custo = ttk.Entry(frame_dados, width=15)
-        self.entry_preco_custo.grid(
-            row=2, column=1, padx=5, pady=5, sticky="w"
-        )
-
-        ttk.Label(frame_dados, text="Preço Venda (R$):").grid(
-            row=2, column=2, padx=5, pady=5, sticky='w'
-        )
-        self.entry_preco_venda = ttk.Entry(frame_dados, width=15)
-        self.entry_preco_venda.grid(
-            row=2, column=3, padx=5, pady=5, sticky="w"
-        )
-
-        frame_dados.grid_columnconfigure(1, weight=1)  # Permite expansão da coluna
-
-        # --- Ações ---
-        frame_acoes = ttk.Frame(self.container_principal)
-        frame_acoes.pack(fill='x', padx=10, pady=5)
-
-        ttk.Label(frame_acoes, text="Buscar por Nome: ").pack(side='left', padx=5)
-        self.entry_buscar_produto = ttk.Entry(frame_acoes, width=30)
-        self.entry_buscar_produto.pack(side='left', padx=5)
-        
-        ttk.Button(
-            frame_acoes, text="Buscar", command=self.buscar_produto
-        ).pack(side='left', padx=5)
-        
-        # Botões à direita
-        ttk.Button(
-            frame_acoes, text="Remover", command=self.remover_produto
-        ).pack(side='right', padx=5)
-        ttk.Button(
-            frame_acoes, text="Atualizar", command=self.atualizar_produto
-        ).pack(side='right', padx=5)
-        ttk.Button(
-            frame_acoes, text="Adicionar", command=self.adicionar_produto
-        ).pack(side='right', padx=5)
-
-        # --- Tabela ---
-        frame_tabela = ttk.Frame(self.container_principal)
-        frame_tabela.pack(fill='both', expand=True, padx=10, pady=5)
-
-        colunas = ("nome", "quantidade", "preco")   # Define colunas da tabela
-        self.tabela_produtos = ttk.Treeview(
-            frame_tabela, columns=colunas, show='headings'
-        )
-        self.tabela_produtos.heading("nome", text="Nome do Produto")
-        self.tabela_produtos.heading('quantidade', text="Qtd")
-        self.tabela_produtos.heading('preco', text='Venda (R$)')
-
-        self.tabela_produtos.column('nome', width=300)
-        self.tabela_produtos.column('quantidade', width=50, anchor='center')
-        self.tabela_produtos.column('preco', width=80, anchor='center')
-
-        scrolly = ttk.Scrollbar(
-            frame_tabela, orient='vertical', command=self.tabela_produtos.yview
-        )
-        self.tabela_produtos.configure(yscrollcommand=scrolly.set)
-
-        self.tabela_produtos.pack(side='left', fill='both', expand=True)
-        scrolly.pack(side='right', fill='y')
-
-        self.tabela_produtos.bind(
-            '<<TreeviewSelect>>', self.preencher_campos
-        )
-
-        # --- Rodapé ---
-        frame_rodape = ttk.Frame(self.container_principal)
-        frame_rodape.pack(fill='x', padx=10, pady=5)
-        ttk.Label(frame_rodape, text="© 2025 Sys360").pack(side='left')
-        
-        ttk.Button(
-            frame_rodape, text="🏠 Início", command=self.mostrar_dashboard
-        ).pack(side='right')
+    def _criar_area_conteudo(self):
+        """Área branca onde as telas aparecem."""
+        self.content_area = tk.Frame(self.main_container, bg="#ecf0f1") # Cinza bem claro
+        self.content_area.pack(side='right', fill='both', expand=True)
 
     # --- Navegação ---
-    def _limpar_container(self):
-        for widget in self.container_principal.winfo_children():
-            widget.destroy()          # Remove todos os widgets do container
+    def limpar_conteudo(self):
+        """Remove a tela atual para mostrar a próxima."""
+        for widget in self.content_area.winfo_children():
+            widget.destroy()
 
     def mostrar_dashboard(self):
-        self._limpar_container()      # Limpa a tela atual
-        Dashboard(self.container_principal, self)  # Exibe o dashboard
+        self.limpar_conteudo()
+        Dashboard(self.content_area, self)
 
-    def mudar_tela(self, nome_tela):
-        if nome_tela == "estoque":    # Verifica se a tela solicitada é estoque
-            self.criar_tela_estoque()
-            self.popular_tabela()
-
-    # --- Lógica de Interface ---
-    def popular_tabela(self, produtos_lista=None):
-        for item in self.tabela_produtos.get_children():
-            self.tabela_produtos.delete(item)  # Limpa a tabela
-        
-        if produtos_lista is None:
-            produtos_lista = lg_produtos.listar_todos_produtos()
-
-        for prod in produtos_lista:
-            self.tabela_produtos.insert(
-                '', 'end', text=prod[0],
-                values=(prod[1], prod[2], f"{prod[3]:.2f}")
-            )
-
-    def limpar_campos(self):
-        self.entry_nome_produto.delete(0, 'end')
-        self.entry_qtde.delete(0, 'end')
-        self.entry_preco_custo.delete(0, 'end')
-        self.entry_preco_venda.delete(0, 'end')
-        self.entry_categoria.delete(0, 'end')
-        self.entry_fornecedor.delete(0, 'end')
-        self.entry_buscar_produto.delete(0, 'end')
-        self.entry_nome_produto.focus_set()
-        
-        if self.tabela_produtos.selection():
-            self.tabela_produtos.selection_remove(
-                self.tabela_produtos.selection()
-            )
-
-    def preencher_campos(self, event):
-        try:
-            item = self.tabela_produtos.focus()
-            if not item:
-                return
-            
-            id_prod = self.tabela_produtos.item(item)['text']
-            prod = lg_produtos.obter_produto_por_id(id_prod)
-            
-            if prod:
-                self.limpar_campos()
-                self.entry_nome_produto.insert(0, prod[1])
-                self.entry_qtde.insert(0, prod[2])
-                self.entry_preco_venda.insert(0, f"{prod[3]:.2f}")
-                self.entry_preco_custo.insert(0, f"{prod[4]:.2f}")
-                self.entry_categoria.insert(0, prod[5])
-                self.entry_fornecedor.insert(0, prod[6])
-        except Exception as e:
-            print(f"Erro ao preencher: {e}")
-
-    # --- Funções de Abertura de Telas ---
-    def abrir_tela_gerenciar_usuarios(self):
-        if self.usuario_logado[4] == 'admin':
-            TelaGerenciarUsuarios(self)
-        else:
-            messagebox.showwarning(
-                "Acesso Negado", "Apenas administradores."
-            )
-
-    def abrir_tela_gerenciar_clientes(self):
-        TelaGerenciarClientes(self)
+    def abrir_tela_estoque(self):
+        self.limpar_conteudo()
+        TelaEstoque(self.content_area) # Instancia a classe que criamos no outro arquivo
 
     def abrir_tela_vendas(self):
-        TelaVendas(self)
+        TelaVendas(self) # Vendas é Toplevel (abre por cima) ou você pode adaptar para Frame
+
+    def abrir_tela_financeiro(self):
+        if self.check_permissao(['admin', 'gestor']):
+            self.limpar_conteudo()
+            TelaFinanceiro(self.content_area) # Se Financeiro for Frame. Se for Toplevel, chame direto.
+
+    def abrir_tela_gerenciar_clientes(self):
+        TelaGerenciarClientes(self) # Mantivemos como Janela Separada
 
     def abrir_tela_frota(self):
-        ScreenFrota(self)
-        
-    def abrir_tela_financeiro(self):
-        if self.usuario_logado[4] in ['admin', 'gestor']:
-            TelaFinanceiro(self)
-        else:
-            messagebox.showwarning(
-                "Acesso Negado", "Apenas Gerentes/Admins."
-            )
+        ScreenFrota(self) # Mantivemos como Janela Separada
 
-    def mostrar_sobre(self):
-        messagebox.showinfo(
-            "Sobre", "Sys360 Estoque v1.0\nDesenvolvido por Gabriel Levi"
-        )
-
-    def _atualizar_permissoes_interface(self):
-        if not self.usuario_logado:
-            return
-        role = self.usuario_logado[4]
-        estado = 'normal' if role == 'admin' else 'disabled'
-        try:
-            self.menu_cadastros.entryconfig(
-                "Gerenciar Usuarios", state=estado
-            )
-        except:
-            pass
-
-    def realizar_logoff(self):
-        if messagebox.askyesno(
-            "Logoff", "Deseja trocar de usuário?"
-        ):
-            self.withdraw()
-            self.usuario_logado = None
-            from gui.screen_login import TelaLogin
-            login = TelaLogin(self)
-            
-            if login.usuario_logado:
-                self.usuario_logado = login.usuario_logado
-                self.title(
-                    f"Sys360 - ({self.usuario_logado[1]})"
-                )
-                self._atualizar_permissoes_interface()
-                self.mostrar_dashboard()
-                self.deiconify()
-                try:
-                    self.state('zoomed')
-                except:
-                    self.attributes('-zoomed', True)
-            else:
-                self.quit()
-
-    # --- CRUD Produtos (Pontes) ---
-    def adicionar_produto(self):
-        try:
-            lg_produtos.adicionar_produto(
-                self.entry_nome_produto.get(),
-                self.entry_qtde.get(),
-                self.entry_preco_venda.get(),
-                self.entry_preco_custo.get(),
-                self.entry_categoria.get(),
-                self.entry_fornecedor.get()
-            )
-            messagebox.showinfo(
-                "Sucesso", "Produto adicionado!"
-            )
-            self.limpar_campos()
-            self.popular_tabela()
-        except ValueError as e:
-            messagebox.showerror("Erro", str(e))
-
-    def atualizar_produto(self):
-        item = self.tabela_produtos.focus()
-        if not item:
-            messagebox.showwarning(
-                "Aviso", "Selecione um produto."
-            )
-            return
-        try:
-            id_prod = self.tabela_produtos.item(item)['text']
-            lg_produtos.atualizar_produto(
-                id_prod,
-                self.entry_nome_produto.get(),
-                self.entry_qtde.get(),
-                self.entry_preco_venda.get(),
-                self.entry_preco_custo.get(),
-                self.entry_categoria.get(),
-                self.entry_fornecedor.get()
-            )
-            messagebox.showinfo(
-                "Sucesso", "Produto atualizado!"
-            )
-            self.limpar_campos()
-            self.popular_tabela()
-        except ValueError as e:
-            messagebox.showerror("Erro", str(e))
-
-    def remover_produto(self):
-        item = self.tabela_produtos.focus()
-        if not item:
-            return
-        if messagebox.askyesno(
-            "Confirmar", "Remover este produto?"
-        ):
-            try:
-                id_prod = self.tabela_produtos.item(item)['text']
-                lg_produtos.remover_produto(id_prod)
-                messagebox.showinfo("Sucesso", "Removido!")
-                self.limpar_campos()
-                self.popular_tabela()
-            except ValueError as e:
-                messagebox.showerror("Erro", str(e))
-
-    def buscar_produto(self):
-        try:
-            res = lg_produtos.buscar_produtos(
-                self.entry_buscar_produto.get()
-            )
-            self.popular_tabela(res)
-        except ValueError as e:
-            messagebox.showerror("Erro", str(e))
-            self.popular_tabela()
-    
-    def abrir_tela_historico(self):
-        TelaHistoricoVendas(self)
-    
-    def abrir_tela_analytics(self):
-        TelaAnalytics(self)
-    
     def abrir_tela_config(self):
         TelaConfiguracao(self)
+
+    # --- Autenticação e Utilitários ---
+    def check_permissao(self, roles_permitidas):
+        if self.usuario_logado and self.usuario_logado[4] in roles_permitidas:
+            return True
+        messagebox.showwarning("Acesso Negado", "Você não tem permissão.")
+        return False
+
+    def realizar_logoff(self):
+        if messagebox.askyesno("Logoff", "Deseja sair do sistema?"):
+            # Opção A: Fecha tudo (usuário abre de novo)
+            self.destroy()

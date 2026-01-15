@@ -1,62 +1,60 @@
-# main.py
-import tkinter as tk
-from tkinter import ttk
+import sys
+import os
 import logging
+from core import logger_config
 
-# Importa as funções de inicialização
-from database.db_manager import inicializar_db
-from core.logic_usuarios import criar_primeiro_admin
-from core.logger_config import configurar_logger
-from core.logic_financeiro import adicionar_categoria_padrao
-# Importa as classes de Tela
+# Configuração de Log
+logger = logging.getLogger(__name__)
+
+# Ajuste de caminho
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from gui.app_main import App
 from gui.screen_login import TelaLogin
+from database import db_manager
 
+def main():
+    try:
+        # 1. Inicializa Banco
+        db_manager.inicializar_db()
+        logger.info("Banco de dados inicializado.")
 
-
-if __name__ == "__main__":
-    
-    # --- 0. Inicializa Logs, DB e Admin ---
-    configurar_logger() # <--- INICIA O LOG AQUI
-    try:   
-        
-        inicializar_db()
-        criar_primeiro_admin()
-        adicionar_categoria_padrao()
-        # --- 1. Cria a App principal, mas a esconde ---
+        # 2. Cria a App Principal (mas deixa invisível)
         app = App()
+        app.withdraw() 
+
+        # 3. Abre Login como janela modal (bloqueia o resto até fechar)
+        # Passamos 'app' como pai para que o Toplevel saiba a quem pertence
+        login_window = TelaLogin(app) 
         
-        app.withdraw()
+        # O código para aqui e espera a janela de login fechar...
+        # ...
+        # ... Janela de login fechou.
 
-        # --- 2. Aplica o estilo ---
-        estilo = ttk.Style(app)
-        estilo.configure("Accent.TButton", font=('Helvetica', 10, 'bold'))
-
-        # --- 3. Mostra a Tela de Login ---
-        login_window = TelaLogin(app)
-    
-        # --- 4. Verifica se o login foi bem-sucedido ---
+        # 4. Verifica se logou
         if login_window.usuario_logado:
+            logger.info(f"Usuário logado: {login_window.usuario_logado[1]}")
+            
+            # Configura o usuário na App Principal
             app.usuario_logado = login_window.usuario_logado
-            # SUCESSO!
-            app.title(f"Sys360 - (Usuário: {app.usuario_logado[1]})")
+            
+            # Atualiza o rodapé com o nome do usuário (se existir o label)
+            if hasattr(app, 'lbl_usuario'):
+                app.lbl_usuario.config(text=f"Usuário: {app.usuario_logado[1]}")
 
-            # --- CORREÇÃO AQUI: Carrega o Dashboard e Permissões ---
-            app._atualizar_permissoes_interface() # Habilita/Desabilita menus
-            app.mostrar_dashboard()               # <--- ESSA LINHA CARREGA A TELA
+            # MÁGICA AQUI: Mostra a janela principal e maximiza
+            app.deiconify() 
+            app.state('zoomed') 
             
-            # --- Lógica de Maximizar ---
-            try:
-                app.state('zoomed') 
-            except:
-                app.attributes('-zoomed', True)
-            
-            app.deiconify()
+            # Inicia o sistema
             app.mainloop()
         else:
-            # FALHA!
-            print("Login cancelado. Encerrando aplicação.")
+            # Se fechou o login sem entrar, mata tudo
+            logger.info("Login cancelado. Encerrando.")
             app.destroy()
+
     except Exception as e:
-        # Se o sistema quebrar totalmente, o log vai pegar
-        logging.critical(f"Erro crítico no sistema: {e}", exc_info=True)
+        logger.critical(f"Erro fatal no main: {e}", exc_info=True)
+
+if __name__ == "__main__":
+    main()

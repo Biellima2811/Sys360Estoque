@@ -456,3 +456,39 @@ def atualizar_cliente(id_cliente, nome, telefone, email, cpf_cnpj, endereco):
         raise e
     finally:
         if conn: conn.close()
+
+# --- FUNÇÕES FINANCEIRAS ---
+
+def adicionar_movimentacao_manual(descricao, valor, tipo):
+    conn = conectar()
+    if conn is None: return
+    try:
+        cursor = conn.cursor()
+        # categoria_id 1 = Geral (Pode criar lógica de categorias depois)
+        cursor.execute("""
+            INSERT INTO financeiro_movimentacoes (descricao, valor, tipo, categoria_id)
+            VALUES (?, ?, ?, 1)
+        """, (descricao, valor, tipo))
+        conn.commit()
+    except Error as e:
+        print(f"Erro financeiro: {e}")
+        raise e
+    finally:
+        if conn: conn.close()
+
+def listar_movimentacoes():
+    conn = conectar()
+    if conn is None: return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, data_lancamento, descricao, valor, tipo 
+            FROM financeiro_movimentacoes 
+            ORDER BY data_lancamento DESC
+        """)
+        return cursor.fetchall()
+    except Error as e:
+        print(f"Erro listar financeiro: {e}")
+        return []
+    finally:
+        if conn: conn.close()

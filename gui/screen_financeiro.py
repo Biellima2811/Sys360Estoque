@@ -1,146 +1,189 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
-import os
-from datetime import datetime
+from tkinter import ttk, messagebox
+from core import logic_financeiro
+# Se você usa matplotlib para gráficos, mantenha os imports
+try:
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    from matplotlib.figure import Figure
+except ImportError:
+    pass
 
-# Imports da Lógica
-from core import logic_financeiro as lg_financeiro
-
-class TelaFinanceiro(tk.Toplevel):
+class TelaFinanceiro(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Sys360 - Gestão Financeira")
-        self.geometry("900x600")
-        self.parent = parent
-        self.usuario_atual = parent.usuario_logado
-
-        # Ícone
-        caminho_icone = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "Estoque360.ico"))
-        if os.path.exists(caminho_icone):
-            self.iconbitmap(caminho_icone)
-
-        self._criar_widgets()
-        self._atualizar_dados() # Carrega dados ao abrir
-
-        # Modal
-        self.transient(parent)
-        # self.grab_set() # Opcional: Se quiser bloquear a janela principal
-        # self.wait_window()
-    
-    def _criar_widgets(self):
-        # --- Layout Principal ---
-        # Topo: Cards de Saldo
-        # Centro: Tabela de Movimentações
-        # Base: Botões de Ação
-
-        # 1. CARDS DE RESUMO (TOPO)
-        frame_resumo = ttk.LabelFrame(self, text='Resumo do Caixa')
-        frame_resumo.pack(fill='x', padx=10, pady=5)
-
-        # Usando Frame interno para alinhar os cards
-        self.lbl_saldo = ttk.Label(frame_resumo, text="Saldo: R$ 0.00",font=("Helvetica", 16, "bold"), foreground="blue")
-        self.lbl_saldo.pack(side='right', padx=20, pady=10)
-
-        btn_atualizar = ttk.Button(frame_resumo, text="🔄 Atualizar", command=self._atualizar_dados)
-        btn_atualizar.pack(side='right', padx=10,pady=10)
-
-        # 2. TABELA DE MOVIMENTAÇÕES (CENTRO)
-        frame_tabela = ttk.Frame(self)
-        frame_tabela.pack(fill='both', expand=True, padx=10, pady=5)
-
-        colunas = ('id', 'data', 'desc', 'tipo', 'valor', 'usuario')
-        self.tree = ttk.Treeview(frame_tabela, columns=colunas, show='headings')
-
-        self.tree.heading('id', text='ID')
-        self.tree.heading('data', text='Data/Hora')
-        self.tree.heading('desc', text='Descrição')
-        self.tree.heading('tipo', text='Tipo')
-        self.tree.heading('valor', text='Valor (R$)')
-        self.tree.heading('usuario', text='Responsável')
-
-        self.tree.column('id', width=40, anchor='center')
-        self.tree.column('data', width=120, anchor='center')
-        self.tree.column('desc', width=250)
-        self.tree.column('tipo', width=80, anchor='center')
-        self.tree.column('valor', width=100, anchor='e')
-        self.tree.column('usuario', width=150)
-
-        scrollbar = ttk.Scrollbar(frame_tabela, orient='vertical', command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-
-        self.tree.pack(side='left', fill='both', expand=True)
-        scrollbar.pack(side='right', fill='y')
-
-        # 3. LANÇAMENTOS MANUAIS (BASE)
-        frame_lancamento = ttk.LabelFrame(self, text="Novo Lançamento Manual (Despesas/Aportes)")
-        frame_lancamento.pack(fill='x', padx=10, pady=10)
-
-        ttk.Label(frame_lancamento, text="Descrição:").grid(row=0, column=0, padx=5, pady=5)
-        self.entry_desc = ttk.Entry(frame_lancamento, width=40)
-        self.entry_desc.grid(row=0, column=1, padx=5, pady=5)
-
-        ttk.Label(frame_lancamento, text='Valor R$:').grid(row=0, column=2, padx=5, pady=5)
-        self.entry_valor = ttk.Entry(frame_lancamento, width=15)
-        self.entry_valor.grid(row=0, column=3, padx=5, pady=5)
-
-        ttk.Label(frame_lancamento, text='Tipo').grid(row=0, column=4, padx=5, pady=5)
-        self.combo_tipo = ttk.Combobox(frame_lancamento, values=['saida', 'entrada'], state='readonly', width=10)
-        self.combo_tipo.set('saida') # Padrão saída (já que entrada vem de vendas)
-        self.combo_tipo.grid(row=0, column=5, padx=5, pady=5)
-
-        btn_lancar = ttk.Button(frame_lancamento, text='Registrar 💾', command=self._registrar_manual, style="Accent.TButton")
-        btn_lancar.grid(row=0, column=6, padx=10, pady=5)
-
-    def _atualizar_dados(self):
-        """Busca saldo e histórico no banco."""
-        # 1. Atualizar Saldo
-        saldo = lg_financeiro.obter_saldo_atual()
-        cor = 'green' if saldo >= 0 else 'red'
-        self.lbl_saldo.config(text=f'Saldo Atual: R${saldo:.2f}', foreground=cor)
-
-        # 2. Atualizar Tabela
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        self.pack(fill='both', expand=True)
         
-        movimentacoes = lg_financeiro.listar_movimentacoes()
-        for mov in movimentacoes:
-            # mov = (id, data, desc, tipo, valor, nome_usuario)
-            
-            # Formatar a cor da linha dependendo se é entrada ou saída
-            # (No Treeview padrão é difícil colorir linhas individuais sem tags, vamos manter simples por enquanto)
-            
-            # Formatar valor e data se necessário
-            valor_fmt = f'R$ {mov[4]:.2f}'
-            tipo_fmt = mov[3].upper()
+        self._criar_interface()
+        self.carregar_dados()
 
-            self.tree.insert('', 'end', values=(mov[0], mov[1], mov[2], tipo_fmt, valor_fmt, mov[5]))
-    
-    def _registrar_manual(self):
+    def _criar_interface(self):
+        # Título
+        ttk.Label(self, text="💰 Gestão Financeira", font=("Segoe UI", 16, "bold")).pack(anchor='w', padx=20, pady=10)
+
+        # Container Principal (Dividido em Esquerda e Direita)
+        paned = ttk.PanedWindow(self, orient='horizontal')
+        paned.pack(fill='both', expand=True, padx=10, pady=5)
+
+        # --- LADO ESQUERDO: Lançamentos ---
+        frame_lan = ttk.Frame(paned)
+        paned.add(frame_lan, weight=1)
+
+        # Cards de Resumo (Topo Esquerda)
+        frame_resumo = ttk.Frame(frame_lan)
+        frame_resumo.pack(fill='x', pady=5)
+        
+        self.card_receita = self._criar_card(frame_resumo, "Receitas", "R$ 0,00", "#27ae60")
+        self.card_receita.pack(side='left', fill='x', expand=True, padx=5)
+        
+        self.card_despesa = self._criar_card(frame_resumo, "Despesas", "R$ 0,00", "#c0392b")
+        self.card_despesa.pack(side='left', fill='x', expand=True, padx=5)
+        
+        self.card_saldo = self._criar_card(frame_resumo, "Saldo", "R$ 0,00", "#2980b9")
+        self.card_saldo.pack(side='left', fill='x', expand=True, padx=5)
+
+        # Formulário de Lançamento
+        frame_form = ttk.LabelFrame(frame_lan, text="Novo Lançamento", padding=10)
+        frame_form.pack(fill='x', padx=5, pady=10)
+
+        ttk.Label(frame_form, text="Descrição:").grid(row=0, column=0, sticky='w')
+        self.entry_desc = ttk.Entry(frame_form, width=30)
+        self.entry_desc.grid(row=0, column=1, padx=5, sticky='ew')
+
+        ttk.Label(frame_form, text="Valor (R$):").grid(row=0, column=2, sticky='w')
+        self.entry_valor = ttk.Entry(frame_form, width=15)
+        self.entry_valor.grid(row=0, column=3, padx=5, sticky='ew')
+
+        ttk.Label(frame_form, text="Tipo:").grid(row=1, column=0, sticky='w', pady=5)
+        self.combo_tipo = ttk.Combobox(frame_form, values=["Receita", "Despesa"], state="readonly", width=10)
+        self.combo_tipo.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+        self.combo_tipo.current(0)
+
+        ttk.Button(frame_form, text="💾 Registrar", command=self.registrar).grid(row=1, column=3, padx=5, pady=5, sticky='ew')
+
+        # Tabela de Movimentações
+        frame_tab = ttk.LabelFrame(frame_lan, text="Últimas Movimentações")
+        frame_tab.pack(fill='both', expand=True, padx=5, pady=5)
+
+        cols = ('id', 'data', 'desc', 'valor', 'tipo')
+        self.tree = ttk.Treeview(frame_tab, columns=cols, show='headings')
+        self.tree.heading('id', text='ID'); self.tree.column('id', width=30)
+        self.tree.heading('data', text='Data'); self.tree.column('data', width=100)
+        self.tree.heading('desc', text='Descrição'); self.tree.column('desc', width=200)
+        self.tree.heading('valor', text='Valor'); self.tree.column('valor', width=80)
+        self.tree.heading('tipo', text='Tipo'); self.tree.column('tipo', width=80)
+        
+        self.tree.pack(fill='both', expand=True)
+
+        # --- LADO DIREITO: Gráficos (Analytics) ---
+        # Se você tiver matplotlib, aqui entra o gráfico. Senão, deixamos um aviso.
+        frame_graf = ttk.LabelFrame(paned, text="Análise Visual", padding=10)
+        paned.add(frame_graf, weight=1)
+        
+        self.area_grafico = tk.Frame(frame_graf, bg="white")
+        self.area_grafico.pack(fill='both', expand=True)
+        
+        # Botão Atualizar
+        ttk.Button(frame_graf, text="🔄 Atualizar Dados", command=self.carregar_dados).pack(fill='x', pady=5)
+
+    def _criar_card(self, parent, titulo, valor, cor_texto):
+        frame = ttk.Frame(parent, style="Card.TFrame", padding=10, relief="raised")
+        ttk.Label(frame, text=titulo, font=("Arial", 10)).pack(anchor='w')
+        lbl_valor = ttk.Label(frame, text=valor, font=("Arial", 14, "bold"), foreground=cor_texto)
+        lbl_valor.pack(anchor='w')
+        # Guarda referência para atualizar depois
+        if titulo == "Receitas": self.lbl_receita = lbl_valor
+        elif titulo == "Despesas": self.lbl_despesa = lbl_valor
+        else: self.lbl_saldo = lbl_valor
+        return frame
+
+    def registrar(self):
         desc = self.entry_desc.get()
-        valor_str = self.entry_valor.get()
-        tipo = self.combo_tipo.get()
-
-        if not desc or not valor_str:
-            messagebox.showwarning("Aviso", 'Preencha desscição e valor!')
-            return
+        valor = self.entry_valor.get()
+        tipo = self.combo_tipo.get().lower() # 'receita' ou 'despesa'
         
+        if not desc or not valor:
+            messagebox.showwarning("Atenção", "Preencha todos os campos.")
+            return
+
         try:
-            valor = float(valor_str.replace(',', '.'))
-            usuario_id = self.usuario_atual[0]
-
-            lg_financeiro.registrar_movimentacao(
-                descricao=desc,
-                valor=valor,
-                tipo=tipo,
-                usuario_id=usuario_id
-            )
-
-            messagebox.showinfo("Sucesso", 'Lançamento realizado!')
+            # Chama a lógica (Adapte se sua função no logic for diferente)
+            # Ex: logic_financeiro.adicionar_movimentacao(desc, valor, tipo)
+            # Vou assumir uma função genérica aqui:
+            logic_financeiro.registrar_movimento(desc, valor, tipo)
+            
+            messagebox.showinfo("Sucesso", "Lançamento registrado!")
             self.entry_desc.delete(0, 'end')
             self.entry_valor.delete(0, 'end')
-            self._atualizar_dados()
-        except ValueError:
-            messagebox.showerror("Erro", 'Valor invalido. Digite aenas números.')
+            self.carregar_dados()
         except Exception as e:
-            messagebox.showerror("Erro", f'Erro ao salvar {e}')
+            messagebox.showerror("Erro", str(e))
+
+    def carregar_dados(self):
+        # Limpa tabela
+        for i in self.tree.get_children(): self.tree.delete(i)
+        
+        try:
+            # Carrega lista (Adapte conforme retorno do seu logic)
+            movs = logic_financeiro.listar_movimentacoes()
+            total_rec = 0
+            total_desp = 0
             
+            for m in movs:
+                # m = (id, data, desc, valor, tipo, ...)
+                valor = float(m[3])
+                tipo = m[4] # 'entrada' ou 'saida' / 'receita' ou 'despesa'
+                
+                # Formata valor
+                val_str = f"R$ {valor:.2f}"
+                
+                self.tree.insert('', 'end', values=(m[0], m[1], m[2], val_str, tipo))
+                
+                if tipo in ['receita', 'entrada']:
+                    total_rec += valor
+                else:
+                    total_desp += valor
+            
+            # Atualiza Cards
+            saldo = total_rec - total_desp
+            self.lbl_receita.config(text=f"R$ {total_rec:.2f}")
+            self.lbl_despesa.config(text=f"R$ {total_desp:.2f}")
+            self.lbl_saldo.config(text=f"R$ {saldo:.2f}", foreground="#27ae60" if saldo >= 0 else "#c0392b")
+            
+            # Se quiser, chame a função de desenhar gráfico aqui
+            self._desenhar_grafico(total_rec, total_desp)
+            
+        except Exception as e:
+            print(f"Erro ao carregar financeiro: {e}")
+
+    def _desenhar_grafico(self, rec, desp):
+        # Verifica se matplotlib está disponível
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+        except ImportError:
+            tk.Label(self.area_grafico, text="Instale 'matplotlib' para ver gráficos", bg="white").place(relx=0.5, rely=0.5, anchor='center')
+            return
+
+        # Limpa gráfico anterior
+        for widget in self.area_grafico.winfo_children():
+            widget.destroy()
+
+        # Cria Figura
+        fig = Figure(figsize=(5, 4), dpi=100)
+        ax = fig.add_subplot(111)
+        
+        # Dados
+        labels = ['Receitas', 'Despesas']
+        valores = [rec, desp]
+        cores = ['#27ae60', '#c0392b']
+        
+        if rec == 0 and desp == 0:
+            ax.text(0.5, 0.5, "Sem dados", ha='center')
+        else:
+            ax.pie(valores, labels=labels, autopct='%1.1f%%', colors=cores, startangle=90)
+            ax.set_title("Balanço Financeiro")
+
+        # Renderiza no Tkinter
+        canvas = FigureCanvasTkAgg(fig, master=self.area_grafico)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True)
